@@ -31,7 +31,12 @@ const Home = () => {
       <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-6 mb-16">
         <Link to="/budgets">
           <Button className="w-full sm:w-auto px-8 py-6 text-lg bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 rounded-lg shadow-lg transition-all duration-300">
-            Orçamentos
+            Criar Orçamento
+          </Button>
+        </Link>
+        <Link to="/budget-list"> {/* Novo botão */}
+          <Button className="w-full sm:w-auto px-8 py-6 text-lg bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 rounded-lg shadow-lg transition-all duration-300">
+            Ver Orçamentos Salvos
           </Button>
         </Link>
         <Link to="/portfolio">
