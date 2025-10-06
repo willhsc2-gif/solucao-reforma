@@ -5,24 +5,70 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, UploadCloud, Save } from "lucide-react";
+import { CalendarIcon, UploadCloud, Save, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+interface Client {
+  id: string;
+  name: string;
+}
 
 const Budgets = () => {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
   const [logoFile, setLogoFile] = React.useState<File | null>(null);
   const [pdfFile, setPdfFile] = React.useState<File | null>(null);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = React.useState<string | null>(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = React.useState<string | null>(null);
+  const [clients, setClients] = React.useState<Client[]>([]);
+  const [selectedClient, setSelectedClient] = React.useState<string | undefined>(undefined);
+  const [formData, setFormData] = React.useState({
+    budgetNumber: "",
+    description: "",
+    additionalNotes: "",
+    duration: "",
+    valueWithMaterial: "",
+    valueWithoutMaterial: "",
+    validityDays: "",
+    paymentMethod: "",
+  });
+  const [loading, setLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    fetchClients();
+  }, []);
+
+  const fetchClients = async () => {
+    const { data, error } = await supabase.from("clients").select("id, name");
+    if (error) {
+      toast.error("Erro ao carregar clientes: " + error.message);
+    } else {
+      setClients(data);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { id, value } = e.target;
+    setFormData((prev) => ({ ...prev, [id.replace(/-/g, "")]: value }));
+  };
 
   const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
-      setLogoFile(event.target.files[0]);
+      const file = event.target.files[0];
+      setLogoFile(file);
+      setLogoPreviewUrl(URL.createObjectURL(file));
     }
   };
 
   const handlePdfUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
-      setPdfFile(event.target.files[0]);
+      const file = event.target.files[0];
+      setPdfFile(file);
+      setPdfPreviewUrl(URL.createObjectURL(file));
     }
   };
 
@@ -33,13 +79,83 @@ const Budgets = () => {
   const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     if (event.dataTransfer.files && event.dataTransfer.files[0]) {
-      setPdfFile(event.dataTransfer.files[0]);
+      const file = event.dataTransfer.files[0];
+      setPdfFile(file);
+      setPdfPreviewUrl(URL.createObjectURL(file));
     }
   };
 
-  const handleSaveAndGeneratePdf = () => {
-    // Logic to save budget data and generate PDF
-    console.log("Salvando orçamento e gerando PDF...");
+  const uploadFile = async (file: File, bucket: string, path: string) => {
+    const { data, error } = await supabase.storage.from(bucket).upload(path, file, {
+      cacheControl: "3600",
+      upsert: false,
+    });
+    if (error) {
+      throw error;
+    }
+    const { data: publicUrlData } = supabase.storage.from(bucket).getPublicUrl(data.path);
+    return publicUrlData.publicUrl;
+  };
+
+  const handleSaveAndGeneratePdf = async () => {
+    setLoading(true);
+    try {
+      let uploadedLogoUrl: string | null = null;
+      if (logoFile) {
+        uploadedLogoUrl = await uploadFile(logoFile, "logos", `${Date.now()}-${logoFile.name}`);
+      }
+
+      let uploadedPdfUrl: string | null = null;
+      if (pdfFile) {
+        uploadedPdfUrl = await uploadFile(pdfFile, "budget_pdfs", `${Date.now()}-${pdfFile.name}`);
+      }
+
+      const { data, error } = await supabase.from("budgets").insert([
+        {
+          client_id: selectedClient,
+          budget_number: formData.budgetNumber,
+          description: formData.description,
+          additional_notes: formData.additionalNotes,
+          duration: formData.duration,
+          budget_date: date ? format(date, "yyyy-MM-dd") : null,
+          value_with_material: parseFloat(formData.valueWithMaterial) || 0,
+          value_without_material: parseFloat(formData.valueWithoutMaterial) || 0,
+          validity_days: parseInt(formData.validityDays) || 0,
+          payment_method: formData.paymentMethod,
+          pdf_url: uploadedPdfUrl,
+          logo_url: uploadedLogoUrl,
+        },
+      ]);
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success("Orçamento salvo e PDF gerado com sucesso!");
+      // Optionally reset form or navigate
+      setFormData({
+        budgetNumber: "",
+        description: "",
+        additionalNotes: "",
+        duration: "",
+        valueWithMaterial: "",
+        valueWithoutMaterial: "",
+        validityDays: "",
+        paymentMethod: "",
+      });
+      setDate(new Date());
+      setLogoFile(null);
+      setPdfFile(null);
+      setLogoPreviewUrl(null);
+      setPdfPreviewUrl(null);
+      setSelectedClient(undefined);
+
+    } catch (error: any) {
+      toast.error("Erro ao salvar orçamento: " + error.message);
+      console.error("Erro ao salvar orçamento:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -47,8 +163,8 @@ const Budgets = () => {
       {/* Header */}
       <header className="bg-black text-white p-4 flex flex-col sm:flex-row items-center justify-between shadow-md">
         <div className="flex items-center mb-4 sm:mb-0">
-          {logoFile ? (
-            <img src={URL.createObjectURL(logoFile)} alt="Logo" className="h-12 mr-4 rounded-md" />
+          {logoPreviewUrl ? (
+            <img src={logoPreviewUrl} alt="Logo" className="h-12 mr-4 rounded-md object-contain" />
           ) : (
             <div className="h-12 w-12 bg-gray-700 flex items-center justify-center rounded-md mr-4">
               <span className="text-sm">Logo</span>
@@ -80,23 +196,34 @@ const Budgets = () => {
           <div className="space-y-4">
             <div>
               <Label htmlFor="budget-number">Número do Orçamento</Label>
-              <Input id="budget-number" placeholder="Ex: ORC-001" />
+              <Input id="budget-number" placeholder="Ex: ORC-001" value={formData.budgetNumber} onChange={handleInputChange} />
             </div>
             <div>
-              <Label htmlFor="client-name">Nome do Cliente</Label>
-              <Input id="client-name" placeholder="Nome Completo do Cliente" />
+              <Label htmlFor="client-name">Vincular a um Cliente (opcional)</Label>
+              <Select onValueChange={setSelectedClient} value={selectedClient}>
+                <SelectTrigger id="client-name">
+                  <SelectValue placeholder="Selecione um cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label htmlFor="services-description">Descrição dos Serviços</Label>
-              <Textarea id="services-description" placeholder="Detalhes dos serviços a serem realizados..." rows={5} />
+              <Textarea id="description" placeholder="Detalhes dos serviços a serem realizados..." rows={5} value={formData.description} onChange={handleInputChange} />
             </div>
             <div>
               <Label htmlFor="additional-notes">Observações Adicionais</Label>
-              <Textarea id="additional-notes" placeholder="Qualquer observação relevante..." rows={3} />
+              <Textarea id="additionalNotes" placeholder="Qualquer observação relevante..." rows={3} value={formData.additionalNotes} onChange={handleInputChange} />
             </div>
             <div>
               <Label htmlFor="duration">Duração da Obra</Label>
-              <Input id="duration" placeholder="Ex: 30 dias úteis" />
+              <Input id="duration" placeholder="Ex: 30 dias úteis" value={formData.duration} onChange={handleInputChange} />
             </div>
           </div>
 
@@ -128,19 +255,19 @@ const Budgets = () => {
             </div>
             <div>
               <Label htmlFor="value-with-material">Valor com Material (R$)</Label>
-              <Input id="value-with-material" type="number" placeholder="0.00" />
+              <Input id="valueWithMaterial" type="number" placeholder="0.00" value={formData.valueWithMaterial} onChange={handleInputChange} />
             </div>
             <div>
               <Label htmlFor="value-without-material">Valor sem Material (R$)</Label>
-              <Input id="value-without-material" type="number" placeholder="0.00" />
+              <Input id="valueWithoutMaterial" type="number" placeholder="0.00" value={formData.valueWithoutMaterial} onChange={handleInputChange} />
             </div>
             <div>
               <Label htmlFor="validity">Validade (dias)</Label>
-              <Input id="validity" type="number" placeholder="Ex: 30" />
+              <Input id="validityDays" type="number" placeholder="Ex: 30" value={formData.validityDays} onChange={handleInputChange} />
             </div>
             <div>
               <Label htmlFor="payment-method">Forma de Pagamento</Label>
-              <Input id="payment-method" placeholder="Ex: 50% no início, 50% na entrega" />
+              <Input id="paymentMethod" placeholder="Ex: 50% no início, 50% na entrega" value={formData.paymentMethod} onChange={handleInputChange} />
             </div>
 
             {/* PDF Upload Section */}
@@ -159,14 +286,33 @@ const Budgets = () => {
               <Label htmlFor="pdf-upload" className="cursor-pointer text-orange-500 hover:text-orange-400 font-medium">
                 Selecionar PDF
               </Label>
-              {pdfFile && <p className="mt-2 text-sm text-gray-500 dark:text-gray-300">Arquivo selecionado: {pdfFile.name}</p>}
+              {pdfFile && (
+                <div className="mt-2 flex items-center justify-center space-x-2">
+                  <p className="text-sm text-gray-500 dark:text-gray-300">Arquivo selecionado: {pdfFile.name}</p>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-7 px-2">
+                        <Eye className="mr-1 h-4 w-4" /> Visualizar
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-4xl h-[90vh]">
+                      <DialogHeader>
+                        <DialogTitle>Visualizar PDF</DialogTitle>
+                      </DialogHeader>
+                      {pdfPreviewUrl && (
+                        <iframe src={pdfPreviewUrl} className="w-full h-full border-none" title="Prévia do PDF"></iframe>
+                      )}
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              )}
             </div>
           </div>
         </form>
 
         <div className="mt-8 text-center">
-          <Button onClick={handleSaveAndGeneratePdf} className="px-8 py-4 text-lg bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700 rounded-lg shadow-lg transition-all duration-300">
-            <Save className="mr-2 h-5 w-5" /> Salvar e Gerar PDF
+          <Button onClick={handleSaveAndGeneratePdf} className="px-8 py-4 text-lg bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700 rounded-lg shadow-lg transition-all duration-300" disabled={loading}>
+            {loading ? "Salvando..." : <><Save className="mr-2 h-5 w-5" /> Salvar e Gerar PDF</>}
           </Button>
         </div>
       </main>

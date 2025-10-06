@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
 import Budgets from "./pages/Budgets";
 import Portfolio from "./pages/Portfolio";
+import PublicPortfolioView from "./pages/PublicPortfolioView"; // Importar a nova página
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -20,6 +21,7 @@ const App = () => (
           <Route path="/" element={<Home />} />
           <Route path="/budgets" element={<Budgets />} />
           <Route path="/portfolio" element={<Portfolio />} />
+          <Route path="/portfolio-view/:publicShareId" element={<PublicPortfolioView />} /> {/* Nova rota */}
           {/* ADICIONE TODAS AS ROTAS PERSONALIZADAS ACIMA DA ROTA CORINGA "*" */}
           <Route path="*" element={<NotFound />} />
         </Routes>
