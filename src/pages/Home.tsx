@@ -3,23 +3,24 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 const Home = () => {
-  const portfolioImages = [
-    {
-      src: "/placeholder.svg", // Substitua com os caminhos reais das imagens
-      alt: "Reforma de Cozinha Moderna",
-      title: "Reforma de Cozinha Moderna",
-    },
-    {
-      src: "/placeholder.svg", // Substitua com os caminhos reais das imagens
-      alt: "Banheiro de Luxo",
-      title: "Banheiro de Luxo",
-    },
-    {
-      src: "/placeholder.svg", // Substitua com os caminhos reais das imagens
-      alt: "Sala de Estar Integrada",
-      title: "Sala de Estar Integrada",
-    },
-  ];
+  // As imagens de portfólio não são mais necessárias, pois a seção foi removida.
+  // const portfolioImages = [
+  //   {
+  //     src: "/placeholder.svg", // Substitua com os caminhos reais das imagens
+  //     alt: "Reforma de Cozinha Moderna",
+  //     title: "Reforma de Cozinha Moderna",
+  //   },
+  //   {
+  //     src: "/placeholder.svg", // Substitua com os caminhos reais das imagens
+  //     alt: "Banheiro de Luxo",
+  //     title: "Banheiro de Luxo",
+  //   },
+  //   {
+  //     src: "/placeholder.svg", // Substitua com os caminhos reais das imagens
+  //     alt: "Sala de Estar Integrada",
+  //     title: "Sala de Estar Integrada",
+  //   },
+  // ];
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4">
@@ -34,7 +35,7 @@ const Home = () => {
             Criar Orçamento
           </Button>
         </Link>
-        <Link to="/budget-list"> {/* Novo botão */}
+        <Link to="/budget-list">
           <Button className="w-full sm:w-auto px-8 py-6 text-lg bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 rounded-lg shadow-lg transition-all duration-300">
             Ver Orçamentos Salvos
           </Button>
@@ -46,25 +47,7 @@ const Home = () => {
         </Link>
       </div>
 
-      <section className="w-full max-w-6xl">
-        <h2 className="text-3xl font-bold text-center mb-8 text-black dark:text-white">Reformas de Alto Padrão</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {portfolioImages.map((item, index) => (
-            <Card key={index} className="overflow-hidden rounded-lg shadow-xl hover:shadow-2xl transition-shadow duration-300">
-              <CardContent className="p-0">
-                <img
-                  src={item.src}
-                  alt={item.alt}
-                  className="w-full h-60 object-cover"
-                />
-                <div className="p-4">
-                  <h3 className="text-xl font-semibold text-black dark:text-white">{item.title}</h3>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
+      {/* A seção de portfólio de imagens foi removida conforme solicitado. */}
     </div>
   );
 };
