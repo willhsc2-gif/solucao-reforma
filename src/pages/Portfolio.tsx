@@ -27,7 +27,6 @@ const Portfolio = () => {
   const [selectedClient, setSelectedClient] = React.useState<string | undefined>(undefined);
   const [portfolioTitle, setPortfolioTitle] = React.useState("");
   const [portfolioDescription, setPortfolioDescription] = React.useState("");
-  const [clientReferenceContact, setClientReferenceContact] = React.useState("");
   const [imageFilesWithPreviews, setImageFilesWithPreviews] = React.useState<ImageFileWithPreview[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [publicShareLink, setPublicShareLink] = React.useState<string | null>(null);
@@ -116,7 +115,7 @@ const Portfolio = () => {
     setLoading(true);
     try {
       if (!portfolioTitle) {
-        toast.error("O título do item de portfólio é obrigatório.");
+        toast.error("O título da foto é obrigatório.");
         return;
       }
       if (imageFilesWithPreviews.length === 0) {
@@ -132,7 +131,6 @@ const Portfolio = () => {
             client_id: selectedClient,
             title: portfolioTitle,
             description: portfolioDescription,
-            client_reference_contact: clientReferenceContact,
             user_id: null, // Definir como null já que não há usuário logado
           },
         ])
@@ -169,7 +167,6 @@ const Portfolio = () => {
       // Reset form
       setPortfolioTitle("");
       setPortfolioDescription("");
-      setClientReferenceContact("");
       setSelectedClient(undefined);
       setImageFilesWithPreviews([]);
 
@@ -231,94 +228,42 @@ const Portfolio = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 p-6">
-      <div className="container mx-auto">
-        <h1 className="text-3xl font-bold mb-8 text-black dark:text-white">Gerenciar Portfólio de Obras</h1>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div>
-            <Label htmlFor="portfolio-title">Título do Item de Portfólio</Label>
-            <Input id="portfolio-title" placeholder="Ex: Reforma de cozinha" value={portfolioTitle} onChange={(e) => setPortfolioTitle(e.target.value)} />
-          </div>
-          <div>
-            <Label htmlFor="portfolio-description">Descrição Geral do Serviço</Label>
-            <Textarea id="portfolio-description" placeholder="Detalhes gerais do serviço realizado..." rows={3} value={portfolioDescription} onChange={(e) => setPortfolioDescription(e.target.value)} />
-          </div>
-          <div>
-            <Label htmlFor="client-link">Vincular a um Cliente (opcional)</Label>
-            <Select onValueChange={setSelectedClient} value={selectedClient}>
-              <SelectTrigger id="client-link">
-                <SelectValue placeholder="Selecione um cliente" />
-              </SelectTrigger>
-              <SelectContent>
-                {clients.map((client) => (
-                  <SelectItem key={client.id} value={client.id}>
-                    {client.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="client-reference-contact">Contato de Referência do Cliente (opcional)</Label>
-            <Input id="client-reference-contact" placeholder="Ex: (XX) XXXX-XXXX" value={clientReferenceContact} onChange={(e) => setClientReferenceContact(e.target.value)} />
-          </div>
-        </div>
-
-        {/* Seção de Upload de Imagens */}
-        <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center mb-8"
-             onDragOver={handleDragOver}
-             onDrop={handleDrop}>
-          <ImageIcon className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600 mb-3" />
-          <p className="text-gray-600 dark:text-gray-400 mb-2">Arraste e solte suas fotos aqui (máx. 20), ou</p>
-          <input
-            type="file"
-            id="image-upload"
-            className="hidden"
-            accept="image/*"
-            multiple
-            onChange={handleImageUpload}
-          />
-          <Label htmlFor="image-upload" className="cursor-pointer text-orange-500 hover:text-orange-400 font-medium">
-            Selecionar Fotos
-          </Label>
-          {imageFilesWithPreviews.length > 0 && (
-            <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {imageFilesWithPreviews.map((file) => (
-                <div key={file.id} className="relative group">
-                  <img src={file.preview} alt={file.name} className="w-full h-32 object-cover rounded-md shadow-sm" />
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => handleRemoveImage(file.id)}
-                  >
-                    <XCircle className="h-4 w-4" />
+      <div className="container mx-auto max-w-4xl">
+        {/* Top Buttons */}
+        <div className="flex justify-end space-x-2 mb-8">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button className="bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700">
+                <Share2 className="mr-2 h-4 w-4" /> Compartilhar
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Compartilhar Item de Portfólio</DialogTitle>
+              </DialogHeader>
+              {publicShareLink ? (
+                <div className="flex items-center space-x-2">
+                  <Input value={publicShareLink} readOnly className="flex-grow" />
+                  <Button onClick={handleCopyLink} variant="secondary">
+                    <LinkIcon className="mr-2 h-4 w-4" /> Copiar
                   </Button>
-                  <Input
-                    placeholder="Descrição da foto"
-                    className="mt-1 text-sm"
-                    value={file.description}
-                    onChange={(e) => handleImageDescriptionChange(file.id, e.target.value)}
-                  />
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              ) : (
+                <p>Salve o item de portfólio primeiro para gerar um link de compartilhamento.</p>
+              )}
+            </DialogContent>
+          </Dialog>
 
-        <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-          <Button onClick={handleSavePortfolioItem} className="px-6 py-3 bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700 rounded-lg shadow-md transition-all duration-300" disabled={loading}>
-            {loading ? "Salvando..." : "Salvar Item de Portfólio"}
-          </Button>
           {publicShareLink && (
-            <Button onClick={handleCopyLink} variant="outline" className="px-6 py-3 border-orange-500 text-orange-500 hover:bg-orange-50 dark:border-orange-600 dark:text-orange-600 dark:hover:bg-gray-800 rounded-lg shadow-md transition-all duration-300">
-              <LinkIcon className="mr-2 h-5 w-5" /> Copiar Link Público
+            <Button onClick={handleCopyLink} variant="outline">
+              <LinkIcon className="mr-2 h-4 w-4" /> Copiar Link
             </Button>
           )}
+
           <Dialog open={isNewClientDialogOpen} onOpenChange={setIsNewClientDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="secondary" className="px-6 py-3 bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 rounded-lg shadow-md transition-all duration-300">
-                <UserPlus className="mr-2 h-5 w-5" /> Novo Contato
+              <Button variant="outline">
+                <UserPlus className="mr-2 h-4 w-4" /> Novo Contato
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -354,6 +299,88 @@ const Portfolio = () => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+        </div>
+
+        {/* Main Title and Description */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-black dark:text-white">Serviços Realizados</h1>
+          <p className="text-xl text-gray-700 dark:text-gray-300">Portfólio de Obras</p>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">Adicione fotos e vincule contatos de clientes como referência.</p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 mb-8">
+          <div>
+            <Label htmlFor="portfolio-title">Título da Foto</Label>
+            <Input id="portfolio-title" placeholder="Ex: Reforma de cozinha" value={portfolioTitle} onChange={(e) => setPortfolioTitle(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="portfolio-description">Descrição do Serviço</Label>
+            <Textarea id="portfolio-description" placeholder="Detalhes sobre o serviço realizado..." rows={3} value={portfolioDescription} onChange={(e) => setPortfolioDescription(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="client-link">Vincular a um Cliente (opcional)</Label>
+            <Select onValueChange={setSelectedClient} value={selectedClient}>
+              <SelectTrigger id="client-link">
+                <SelectValue placeholder="Selecione um cliente" />
+              </SelectTrigger>
+              <SelectContent>
+                {clients.map((client) => (
+                  <SelectItem key={client.id} value={client.id}>
+                    {client.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Upload de Fotos do Serviço Section */}
+        <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center mb-8"
+             onDragOver={handleDragOver}
+             onDrop={handleDrop}>
+          <ImageIcon className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600 mb-3" />
+          <p className="text-gray-600 dark:text-gray-400 mb-2">Arraste e solte suas fotos aqui ou clique no botão abaixo.</p>
+          <input
+            type="file"
+            id="image-upload"
+            className="hidden"
+            accept="image/*"
+            multiple
+            onChange={handleImageUpload}
+          />
+          <Label htmlFor="image-upload" className="cursor-pointer inline-flex items-center justify-center px-6 py-3 bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700 rounded-lg shadow-md transition-all duration-300 font-medium">
+            Adicionar Fotos
+          </Label>
+          {imageFilesWithPreviews.length > 0 && (
+            <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {imageFilesWithPreviews.map((file) => (
+                <div key={file.id} className="relative group">
+                  <img src={file.preview} alt={file.name} className="w-full h-32 object-cover rounded-md shadow-sm" />
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => handleRemoveImage(file.id)}
+                  >
+                    <XCircle className="h-4 w-4" />
+                  </Button>
+                  <Input
+                    placeholder="Descrição da foto"
+                    className="mt-1 text-sm"
+                    value={file.description}
+                    onChange={(e) => handleImageDescriptionChange(file.id, e.target.value)}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Save Button */}
+        <div className="flex justify-end mt-8">
+          <Button onClick={handleSavePortfolioItem} className="px-8 py-4 text-lg bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700 rounded-lg shadow-lg transition-all duration-300" disabled={loading}>
+            {loading ? "Salvando..." : "Salvar Serviço"}
+          </Button>
         </div>
       </div>
     </div>
