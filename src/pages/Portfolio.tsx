@@ -4,16 +4,30 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Share2, Link as LinkIcon, UserPlus, Image as ImageIcon, XCircle } from "lucide-react";
+import { Share2, Link as LinkIcon, UserPlus, Image as ImageIcon, XCircle, Users, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { v4 as uuidv4 } from 'uuid';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Client {
   id: string;
   name: string;
   phone?: string;
+  email?: string;
+  address?: string;
+  city_zip?: string;
 }
 
 interface ImageFileWithPreview extends File {
@@ -38,13 +52,15 @@ const Portfolio = () => {
   const [newClientAddress, setNewClientAddress] = React.useState("");
   const [newClientCityZip, setNewClientCityZip] = React.useState("");
   const [isNewClientDialogOpen, setIsNewClientDialogOpen] = React.useState(false);
+  const [isManageClientsDialogOpen, setIsManageClientsDialogOpen] = React.useState(false);
+
 
   React.useEffect(() => {
     fetchClients();
   }, []);
 
   const fetchClients = async () => {
-    const { data, error } = await supabase.from("clients").select("id, name, phone");
+    const { data, error } = await supabase.from("clients").select("id, name, phone, email, address, city_zip");
     if (error) {
       toast.error("Erro ao carregar clientes: " + error.message);
     } else {
@@ -226,6 +242,26 @@ const Portfolio = () => {
     }
   };
 
+  const handleDeleteClient = async (clientId: string) => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.from("clients").delete().eq("id", clientId);
+      if (error) {
+        throw error;
+      }
+      toast.success("Cliente excluído com sucesso!");
+      fetchClients(); // Refresh the client list
+      if (selectedClient === clientId) {
+        setSelectedClient(undefined); // Deselect if the deleted client was selected
+      }
+    } catch (error: any) {
+      toast.error("Erro ao excluir cliente: " + error.message);
+      console.error("Erro ao excluir cliente:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 p-6">
       <div className="container mx-auto max-w-4xl">
@@ -296,6 +332,59 @@ const Portfolio = () => {
                 <Button onClick={handleAddClient} disabled={loading}>
                   {loading ? "Adicionando..." : "Adicionar Cliente"}
                 </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isManageClientsDialogOpen} onOpenChange={setIsManageClientsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Users className="mr-2 h-4 w-4" /> Gerenciar Clientes
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Gerenciar Clientes</DialogTitle>
+              </DialogHeader>
+              <div className="max-h-[400px] overflow-y-auto">
+                {clients.length === 0 ? (
+                  <p className="text-center text-gray-500 dark:text-gray-400">Nenhum cliente cadastrado.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {clients.map((client) => (
+                      <li key={client.id} className="flex items-center justify-between p-2 border rounded-md dark:border-gray-700">
+                        <div>
+                          <p className="font-medium">{client.name}</p>
+                          {client.phone && <p className="text-sm text-gray-600 dark:text-gray-400">{client.phone}</p>}
+                        </div>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="sm" className="ml-4">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta ação não pode ser desfeita. Isso excluirá permanentemente o cliente <span className="font-bold">{client.name}</span> e qualquer portfólio ou orçamento vinculado a ele.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteClient(client.id)}>
+                                Excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <DialogFooter>
+                <Button onClick={() => setIsManageClientsDialogOpen(false)}>Fechar</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
