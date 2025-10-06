@@ -3,10 +3,12 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Home from "./pages/Home"; // Import the new Home page
-import Budgets from "./pages/Budgets"; // Import the new Budgets page
-import Portfolio from "./pages/Portfolio"; // Import the new Portfolio page
+import Home from "./pages/Home";
+import Budgets from "./pages/Budgets";
+import Portfolio from "./pages/Portfolio";
 import NotFound from "./pages/NotFound";
+import Login from "./pages/Login"; // Import the Login page
+import { SessionContextProvider } from "./integrations/supabase/supabaseContext"; // Import the SessionContextProvider
 
 const queryClient = new QueryClient();
 
@@ -16,13 +18,16 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />} /> {/* Set Home as the default route */}
-          <Route path="/budgets" element={<Budgets />} />
-          <Route path="/portfolio" element={<Portfolio />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <SessionContextProvider> {/* Wrap routes with SessionContextProvider */}
+          <Routes>
+            <Route path="/login" element={<Login />} /> {/* Add login route */}
+            <Route path="/" element={<Home />} />
+            <Route path="/budgets" element={<Budgets />} />
+            <Route path="/portfolio" element={<Portfolio />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </SessionContextProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
