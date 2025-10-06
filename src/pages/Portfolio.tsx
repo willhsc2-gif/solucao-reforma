@@ -133,6 +133,7 @@ const Portfolio = () => {
             title: portfolioTitle,
             description: portfolioDescription,
             client_reference_contact: clientReferenceContact,
+            user_id: null, // Definir como null já que não há usuário logado
           },
         ])
         .select()
@@ -203,6 +204,7 @@ const Portfolio = () => {
           email: newClientEmail,
           address: newClientAddress,
           city_zip: newClientCityZip,
+          user_id: null, // Definir como null já que não há usuário logado
         },
       ]).select().single();
 
