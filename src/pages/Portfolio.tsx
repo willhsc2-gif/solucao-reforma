@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Share2, Link as LinkIcon, UserPlus, Image as ImageIcon, XCircle, Users, Trash2 } from "lucide-react";
+import { Share2, Link as LinkIcon, UserPlus, Image as ImageIcon, XCircle, Users, Trash2, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -45,15 +45,11 @@ const Portfolio = () => {
   const [loading, setLoading] = React.useState(false);
   const [publicShareLink, setPublicShareLink] = React.useState<string | null>(null);
 
-  // State for new client dialog
-  const [newClientName, setNewClientName] = React.useState("");
-  const [newClientPhone, setNewClientPhone] = React.useState("");
-  const [newClientEmail, setNewClientEmail] = React.useState("");
-  const [newClientAddress, setNewClientAddress] = React.useState("");
-  const [newClientCityZip, setNewClientCityZip] = React.useState("");
-  const [isNewClientDialogOpen, setIsNewClientDialogOpen] = React.useState(false);
+  // State for client form dialog (add/edit)
+  const [isClientFormDialogOpen, setIsClientFormDialogOpen] = React.useState(false);
+  const [isNewClientMode, setIsNewClientMode] = React.useState(true); // true for add, false for edit
+  const [clientForm, setClientForm] = React.useState<Partial<Client>>({});
   const [isManageClientsDialogOpen, setIsManageClientsDialogOpen] = React.useState(false);
-
 
   React.useEffect(() => {
     fetchClients();
@@ -203,40 +199,92 @@ const Portfolio = () => {
     }
   };
 
-  const handleAddClient = async () => {
+  const handleClientFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setClientForm((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const handleCepChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const cep = e.target.value.replace(/\D/g, ''); // Remove non-numeric characters
+    setClientForm((prev) => ({ ...prev, city_zip: e.target.value })); // Update city_zip with raw CEP input
+
+    if (cep.length === 8) {
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        const data = await response.json();
+
+        if (data.erro) {
+          toast.error("CEP não encontrado.");
+          setClientForm((prev) => ({ ...prev, address: "", city_zip: e.target.value }));
+          return;
+        }
+
+        setClientForm((prev) => ({
+          ...prev,
+          address: `${data.logradouro}, ${data.bairro}`,
+          city_zip: `${data.localidade} - ${data.uf} (${cep})`, // Format as "City - State (CEP)"
+        }));
+        toast.success("Endereço preenchido automaticamente!");
+      } catch (error) {
+        console.error("Erro ao buscar CEP:", error);
+        toast.error("Erro ao buscar CEP. Verifique a conexão ou o CEP digitado.");
+        setClientForm((prev) => ({ ...prev, address: "", city_zip: e.target.value }));
+      }
+    }
+  };
+
+  const handleSaveClient = async () => {
     setLoading(true);
     try {
-      if (!newClientName) {
+      if (!clientForm.name) {
         toast.error("O nome do cliente é obrigatório.");
         return;
       }
-      const { data, error } = await supabase.from("clients").insert([
-        {
-          name: newClientName,
-          phone: newClientPhone,
-          email: newClientEmail,
-          address: newClientAddress,
-          city_zip: newClientCityZip,
-          user_id: null, // Definir como null já que não há usuário logado
-        },
-      ]).select().single();
 
-      if (error) {
-        throw error;
+      if (isNewClientMode) {
+        const { data, error } = await supabase.from("clients").insert([
+          {
+            name: clientForm.name,
+            phone: clientForm.phone,
+            email: clientForm.email,
+            address: clientForm.address,
+            city_zip: clientForm.city_zip,
+            user_id: null, // Definir como null já que não há usuário logado
+          },
+        ]).select().single();
+
+        if (error) {
+          throw error;
+        }
+        toast.success("Cliente adicionado com sucesso!");
+        setClients((prev) => [...prev, data]);
+        setSelectedClient(data.id); // Select the newly added client
+      } else {
+        if (!clientForm.id) {
+          toast.error("ID do cliente não encontrado para atualização.");
+          return;
+        }
+        const { data, error } = await supabase.from("clients").update({
+          name: clientForm.name,
+          phone: clientForm.phone,
+          email: clientForm.email,
+          address: clientForm.address,
+          city_zip: clientForm.city_zip,
+        }).eq("id", clientForm.id).select().single();
+
+        if (error) {
+          throw error;
+        }
+        toast.success("Cliente atualizado com sucesso!");
+        setClients((prev) => prev.map(c => c.id === data.id ? data : c));
+        setSelectedClient(data.id); // Keep selected if it was the updated one
       }
 
-      toast.success("Cliente adicionado com sucesso!");
-      setClients((prev) => [...prev, data]);
-      setSelectedClient(data.id); // Select the newly added client
-      setIsNewClientDialogOpen(false);
-      setNewClientName("");
-      setNewClientPhone("");
-      setNewClientEmail("");
-      setNewClientAddress("");
-      setNewClientCityZip("");
+      setIsClientFormDialogOpen(false);
+      setClientForm({}); // Clear form
     } catch (error: any) {
-      toast.error("Erro ao adicionar cliente: " + error.message);
-      console.error("Erro ao adicionar cliente:", error);
+      toast.error("Erro ao salvar cliente: " + error.message);
+      console.error("Erro ao salvar cliente:", error);
     } finally {
       setLoading(false);
     }
@@ -260,6 +308,18 @@ const Portfolio = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const openAddClientDialog = () => {
+    setClientForm({});
+    setIsNewClientMode(true);
+    setIsClientFormDialogOpen(true);
+  };
+
+  const openEditClientDialog = (client: Client) => {
+    setClientForm(client);
+    setIsNewClientMode(false);
+    setIsClientFormDialogOpen(true);
   };
 
   return (
@@ -296,45 +356,9 @@ const Portfolio = () => {
             </Button>
           )}
 
-          <Dialog open={isNewClientDialogOpen} onOpenChange={setIsNewClientDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <UserPlus className="mr-2 h-4 w-4" /> Novo Contato
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Adicionar Novo Cliente</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="newClientName" className="text-right">Nome</Label>
-                  <Input id="newClientName" value={newClientName} onChange={(e) => setNewClientName(e.target.value)} className="col-span-3" />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="newClientPhone" className="text-right">Telefone</Label>
-                  <Input id="newClientPhone" value={newClientPhone} onChange={(e) => setNewClientPhone(e.target.value)} className="col-span-3" />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="newClientEmail" className="text-right">Email</Label>
-                  <Input id="newClientEmail" value={newClientEmail} onChange={(e) => setNewClientEmail(e.target.value)} className="col-span-3" />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="newClientAddress" className="text-right">Endereço</Label>
-                  <Input id="newClientAddress" value={newClientAddress} onChange={(e) => setNewClientAddress(e.target.value)} className="col-span-3" />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="newClientCityZip" className="text-right">Cidade/CEP</Label>
-                  <Input id="newClientCityZip" value={newClientCityZip} onChange={(e) => setNewClientCityZip(e.target.value)} className="col-span-3" />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button onClick={handleAddClient} disabled={loading}>
-                  {loading ? "Adicionando..." : "Adicionar Cliente"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button variant="outline" onClick={openAddClientDialog}>
+            <UserPlus className="mr-2 h-4 w-4" /> Novo Contato
+          </Button>
 
           <Dialog open={isManageClientsDialogOpen} onOpenChange={setIsManageClientsDialogOpen}>
             <DialogTrigger asChild>
@@ -357,27 +381,32 @@ const Portfolio = () => {
                           <p className="font-medium">{client.name}</p>
                           {client.phone && <p className="text-sm text-gray-600 dark:text-gray-400">{client.phone}</p>}
                         </div>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="sm" className="ml-4">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Esta ação não pode ser desfeita. Isso excluirá permanentemente o cliente <span className="font-bold">{client.name}</span> e qualquer portfólio ou orçamento vinculado a ele.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDeleteClient(client.id)}>
-                                Excluir
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                        <div className="flex space-x-2">
+                          <Button variant="outline" size="sm" onClick={() => openEditClientDialog(client)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="destructive" size="sm">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Esta ação não pode ser desfeita. Isso excluirá permanentemente o cliente <span className="font-bold">{client.name}</span> e qualquer portfólio ou orçamento vinculado a ele.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteClient(client.id)}>
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -389,6 +418,42 @@ const Portfolio = () => {
             </DialogContent>
           </Dialog>
         </div>
+
+        {/* Client Form Dialog (Add/Edit) */}
+        <Dialog open={isClientFormDialogOpen} onOpenChange={setIsClientFormDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{isNewClientMode ? "Adicionar Novo Cliente" : "Editar Cliente"}</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">Nome</Label>
+                <Input id="name" value={clientForm.name || ""} onChange={handleClientFormChange} className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="phone" className="text-right">Telefone</Label>
+                <Input id="phone" value={clientForm.phone || ""} onChange={handleClientFormChange} className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="email" className="text-right">Email</Label>
+                <Input id="email" type="email" value={clientForm.email || ""} onChange={handleClientFormChange} className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="city_zip" className="text-right">CEP</Label>
+                <Input id="city_zip" value={clientForm.city_zip || ""} onChange={handleCepChange} placeholder="Digite o CEP para preencher o endereço" className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="address" className="text-right">Endereço</Label>
+                <Input id="address" value={clientForm.address || ""} onChange={handleClientFormChange} className="col-span-3" />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={handleSaveClient} disabled={loading}>
+                {loading ? (isNewClientMode ? "Adicionando..." : "Salvando...") : (isNewClientMode ? "Adicionar Cliente" : "Salvar Alterações")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Main Title and Description */}
         <div className="text-center mb-8">
