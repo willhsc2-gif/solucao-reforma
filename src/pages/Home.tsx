@@ -5,17 +5,17 @@ import { Card, CardContent } from "@/components/ui/card";
 const Home = () => {
   const portfolioImages = [
     {
-      src: "/placeholder.svg", // Replace with actual image paths
+      src: "/placeholder.svg", // Substitua com os caminhos reais das imagens
       alt: "Reforma de Cozinha Moderna",
       title: "Reforma de Cozinha Moderna",
     },
     {
-      src: "/placeholder.svg", // Replace with actual image paths
+      src: "/placeholder.svg", // Substitua com os caminhos reais das imagens
       alt: "Banheiro de Luxo",
       title: "Banheiro de Luxo",
     },
     {
-      src: "/placeholder.svg", // Replace with actual image paths
+      src: "/placeholder.svg", // Substitua com os caminhos reais das imagens
       alt: "Sala de Estar Integrada",
       title: "Sala de Estar Integrada",
     },

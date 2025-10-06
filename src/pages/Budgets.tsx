@@ -39,7 +39,7 @@ const Budgets = () => {
 
   const handleSaveAndGeneratePdf = () => {
     // Logic to save budget data and generate PDF
-    console.log("Saving budget and generating PDF...");
+    console.log("Salvando orçamento e gerando PDF...");
   };
 
   return (

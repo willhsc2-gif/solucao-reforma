@@ -11,7 +11,7 @@ const Portfolio = () => {
   const [imageFiles, setImageFiles] = React.useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = React.useState<string[]>([]);
 
-  // Dummy client data for the dropdown
+  // Dados de cliente fictícios para o dropdown
   const clients = [
     { id: "1", name: "Cliente A" },
     { id: "2", name: "Cliente B" },
@@ -42,18 +42,18 @@ const Portfolio = () => {
   };
 
   const handleShare = () => {
-    // Logic to generate and share public link
-    console.log("Sharing portfolio...");
+    // Lógica para gerar e compartilhar link público
+    console.log("Compartilhando portfólio...");
   };
 
   const handleCopyLink = () => {
-    // Logic to copy link to clipboard
-    console.log("Copying link...");
+    // Lógica para copiar link para a área de transferência
+    console.log("Copiando link...");
   };
 
   const handleNewContact = () => {
-    // Logic to add new client
-    console.log("Adding new contact...");
+    // Lógica para adicionar novo cliente
+    console.log("Adicionando novo contato...");
   };
 
   return (
@@ -87,7 +87,7 @@ const Portfolio = () => {
           </div>
         </div>
 
-        {/* Image Upload Section */}
+        {/* Seção de Upload de Imagens */}
         <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center mb-8"
              onDragOver={handleDragOver}
              onDrop={handleDrop}>
@@ -108,7 +108,7 @@ const Portfolio = () => {
             <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {imagePreviews.map((preview, index) => (
                 <div key={index} className="relative">
-                  <img src={preview} alt={`Preview ${index}`} className="w-full h-32 object-cover rounded-md shadow-sm" />
+                  <img src={preview} alt={`Prévia ${index}`} className="w-full h-32 object-cover rounded-md shadow-sm" />
                   <p className="text-xs text-gray-500 dark:text-gray-300 mt-1 truncate">{imageFiles[index].name}</p>
                 </div>
               ))}

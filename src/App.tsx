@@ -7,8 +7,6 @@ import Home from "./pages/Home";
 import Budgets from "./pages/Budgets";
 import Portfolio from "./pages/Portfolio";
 import NotFound from "./pages/NotFound";
-import Login from "./pages/Login"; // Import the Login page
-import { SessionContextProvider } from "./integrations/supabase/supabaseContext"; // Import the SessionContextProvider
 
 const queryClient = new QueryClient();
 
@@ -18,16 +16,13 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <SessionContextProvider> {/* Wrap routes with SessionContextProvider */}
-          <Routes>
-            <Route path="/login" element={<Login />} /> {/* Add login route */}
-            <Route path="/" element={<Home />} />
-            <Route path="/budgets" element={<Budgets />} />
-            <Route path="/portfolio" element={<Portfolio />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </SessionContextProvider>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/budgets" element={<Budgets />} />
+          <Route path="/portfolio" element={<Portfolio />} />
+          {/* ADICIONE TODAS AS ROTAS PERSONALIZADAS ACIMA DA ROTA CORINGA "*" */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
