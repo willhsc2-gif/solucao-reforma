@@ -8,6 +8,7 @@ import { Save, UploadCloud, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from 'uuid';
+import { sanitizeFileName } from "@/utils/file"; // Importar a função de sanitização
 
 interface CompanySettings {
   id: string;
@@ -93,7 +94,8 @@ const Settings = () => {
 
       if (logoFile) {
         // Upload new logo
-        const filePath = `${SETTINGS_ID}/${uuidv4()}-${logoFile.name}`;
+        const sanitizedLogoFileName = sanitizeFileName(logoFile.name); // Sanitize the filename
+        const filePath = `${SETTINGS_ID}/${uuidv4()}-${sanitizedLogoFileName}`;
         newLogoUrl = await uploadFile(logoFile, "logos", filePath);
       }
 
