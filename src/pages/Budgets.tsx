@@ -5,15 +5,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, UploadCloud, Save, Eye, Mic } from "lucide-react"; // Importar Mic icon
+import { CalendarIcon, Save, Eye, Mic, Share2 } from "lucide-react"; // Adicionado Share2
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale"; // Importar o locale ptBR
+import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { v4 as uuidv4 } from 'uuid'; // Importar uuidv4
-import useSpeechToText from "@/hooks/use-speech-to-text"; // Importar o novo hook
+import { v4 as uuidv4 } from 'uuid';
+import useSpeechToText from "@/hooks/use-speech-to-text";
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface CompanySettings {
   id: string;
@@ -25,12 +27,10 @@ interface CompanySettings {
   logo_url: string;
 }
 
-const SETTINGS_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'; // Fixed ID for the single company settings entry
+const SETTINGS_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
 
 const Budgets = () => {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
-  const [pdfFile, setPdfFile] = React.useState<File | null>(null);
-  const [pdfPreviewUrl, setPdfPreviewUrl] = React.useState<string | null>(null);
   const [companySettings, setCompanySettings] = React.useState<Partial<CompanySettings>>({});
   const [formData, setFormData] = React.useState({
     budgetNumber: "",
@@ -44,8 +44,8 @@ const Budgets = () => {
     paymentMethod: "",
   });
   const [loading, setLoading] = React.useState(false);
+  const pdfContentRef = React.useRef<HTMLDivElement>(null); // Ref para o conteúdo do PDF
 
-  // Speech-to-text hooks
   const {
     isListening: isDescriptionListening,
     transcript: descriptionTranscript,
@@ -61,16 +61,15 @@ const Budgets = () => {
     clearTranscript: clearNotesTranscript,
   } = useSpeechToText();
 
-  // Refs para armazenar o texto base antes de iniciar o reconhecimento
   const baseDescriptionTextRef = React.useRef('');
   const baseNotesTextRef = React.useRef('');
 
   const generateBudgetNumber = () => {
-    return `ORC-${uuidv4().substring(0, 8).toUpperCase()}`; // Gera um número de orçamento único
+    return `ORC-${uuidv4().substring(0, 8).toUpperCase()}`;
   };
 
   React.useEffect(() => {
-    setFormData((prev) => ({ ...prev, budgetNumber: generateBudgetNumber() })); // Gera o número do orçamento ao carregar
+    setFormData((prev) => ({ ...prev, budgetNumber: generateBudgetNumber() }));
     fetchCompanySettings();
   }, []);
 
@@ -82,7 +81,7 @@ const Budgets = () => {
         .eq("id", SETTINGS_ID)
         .single();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 means "no rows found"
+      if (error && error.code !== 'PGRST116') {
         throw error;
       }
 
@@ -97,7 +96,6 @@ const Budgets = () => {
     }
   };
 
-  // Efeito para atualizar a descrição com o texto reconhecido
   React.useEffect(() => {
     if (isDescriptionListening) {
       setFormData((prev) => ({
@@ -105,7 +103,6 @@ const Budgets = () => {
         description: baseDescriptionTextRef.current + descriptionTranscript,
       }));
     } else if (descriptionTranscript) {
-      // Quando a escuta para, garante que o texto final seja aplicado e limpa o transcript do hook
       setFormData((prev) => ({
         ...prev,
         description: baseDescriptionTextRef.current + descriptionTranscript,
@@ -114,7 +111,6 @@ const Budgets = () => {
     }
   }, [descriptionTranscript, isDescriptionListening, clearDescriptionTranscript]);
 
-  // Efeito para atualizar as observações adicionais com o texto reconhecido
   React.useEffect(() => {
     if (isNotesListening) {
       setFormData((prev) => ({
@@ -135,27 +131,6 @@ const Budgets = () => {
     setFormData((prev) => ({ ...prev, [id.replace(/-/g, "")]: value }));
   };
 
-  const handlePdfUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      const file = event.target.files[0];
-      setPdfFile(file);
-      setPdfPreviewUrl(URL.createObjectURL(file));
-    }
-  };
-
-  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-  };
-
-  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    if (event.dataTransfer.files && event.dataTransfer.files[0]) {
-      const file = event.dataTransfer.files[0];
-      setPdfFile(file);
-      setPdfPreviewUrl(URL.createObjectURL(file));
-    }
-  };
-
   const uploadFile = async (file: File, bucket: string, path: string) => {
     const { data, error } = await supabase.storage.from(bucket).upload(path, file, {
       cacheControl: "3600",
@@ -168,18 +143,53 @@ const Budgets = () => {
     return publicUrlData.publicUrl;
   };
 
+  const generatePdf = async () => {
+    if (!pdfContentRef.current) {
+      toast.error("Erro: Conteúdo do PDF não encontrado.");
+      return null;
+    }
+
+    const canvas = await html2canvas(pdfContentRef.current, { scale: 2 });
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const imgWidth = 210; // A4 width in mm
+    const pageHeight = 297; // A4 height in mm
+    const imgHeight = canvas.height * imgWidth / canvas.width;
+    let heightLeft = imgHeight;
+    let position = 0;
+
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+
+    while (heightLeft >= 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+
+    const pdfBlob = pdf.output('blob');
+    return new File([pdfBlob], `orcamento-${formData.budgetNumber}.pdf`, { type: 'application/pdf' });
+  };
+
   const handleSaveAndGeneratePdf = async () => {
     setLoading(true);
     try {
-      let uploadedPdfUrl: string | null = null;
-      if (pdfFile) {
-        uploadedPdfUrl = await uploadFile(pdfFile, "budget_pdfs", `${Date.now()}-${pdfFile.name}`);
+      // 1. Gerar o PDF
+      const generatedPdfFile = await generatePdf();
+      if (!generatedPdfFile) {
+        throw new Error("Falha ao gerar o PDF.");
       }
 
-      const { data, error } = await supabase.from("budgets").insert([
+      // 2. Fazer upload do PDF gerado
+      const pdfPath = `budgets/${formData.budgetNumber}-${Date.now()}.pdf`;
+      const uploadedPdfUrl = await uploadFile(generatedPdfFile, "budget_pdfs", pdfPath);
+
+      // 3. Salvar dados do orçamento no Supabase
+      const { error } = await supabase.from("budgets").insert([
         {
-          client_id: null, // Não vincula a um cliente existente por ID
-          client_name_text: formData.clientName, // Salva o nome digitado
+          client_id: null,
+          client_name_text: formData.clientName,
           budget_number: formData.budgetNumber,
           description: formData.description,
           additional_notes: formData.additionalNotes,
@@ -190,7 +200,7 @@ const Budgets = () => {
           validity_days: parseInt(formData.validityDays) || 0,
           payment_method: formData.paymentMethod,
           pdf_url: uploadedPdfUrl,
-          logo_url: companySettings.logo_url, // Usa o logo das configurações da empresa
+          logo_url: companySettings.logo_url,
         },
       ]);
 
@@ -198,11 +208,20 @@ const Budgets = () => {
         throw error;
       }
 
-      toast.success("Orçamento salvo e PDF gerado com sucesso!");
+      toast.success("Orçamento salvo e PDF gerado com sucesso!", {
+        action: {
+          label: "Compartilhar no WhatsApp",
+          onClick: () => {
+            const whatsappMessage = `Olá ${formData.clientName || 'cliente'}! Segue o orçamento ${formData.budgetNumber}: ${uploadedPdfUrl}`;
+            window.open(`https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`, '_blank');
+          },
+        },
+      });
+
       // Reset form
       setFormData({
-        budgetNumber: generateBudgetNumber(), // Gera um novo número de orçamento
-        clientName: "", // Limpa o nome do cliente
+        budgetNumber: generateBudgetNumber(),
+        clientName: "",
         description: "",
         additionalNotes: "",
         duration: "",
@@ -212,8 +231,6 @@ const Budgets = () => {
         paymentMethod: "",
       });
       setDate(new Date());
-      setPdfFile(null);
-      setPdfPreviewUrl(null);
 
     } catch (error: any) {
       toast.error("Erro ao salvar orçamento: " + error.message);
@@ -223,14 +240,13 @@ const Budgets = () => {
     }
   };
 
-  // Handlers para os botões de microfone
   const handleToggleDescriptionListening = () => {
     if (!browserSupportsSpeechRecognition) {
       toast.error("Seu navegador não suporta a API de Reconhecimento de Voz.");
       return;
     }
     if (!isDescriptionListening) {
-      baseDescriptionTextRef.current = formData.description; // Captura o texto atual do campo
+      baseDescriptionTextRef.current = formData.description;
     }
     toggleDescriptionListening();
   };
@@ -241,7 +257,7 @@ const Budgets = () => {
       return;
     }
     if (!isNotesListening) {
-      baseNotesTextRef.current = formData.additionalNotes; // Captura o texto atual do campo
+      baseNotesTextRef.current = formData.additionalNotes;
     }
     toggleNotesListening();
   };
@@ -258,7 +274,6 @@ const Budgets = () => {
               <span className="text-sm">Logo</span>
             </div>
           )}
-          {/* Removido o input de upload de logo daqui, agora é feito na página de configurações */}
         </div>
         <div className="text-sm text-center sm:text-right">
           <p>Telefone: {companySettings.phone || "(XX) XXXX-XXXX"}</p>
@@ -367,44 +382,6 @@ const Budgets = () => {
               <Label htmlFor="payment-method">Forma de Pagamento</Label>
               <Input id="paymentMethod" placeholder="Ex: 50% no início, 50% na entrega" value={formData.paymentMethod} onChange={handleInputChange} />
             </div>
-
-            {/* PDF Upload Section */}
-            <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center mt-6"
-                 onDragOver={handleDragOver}
-                 onDrop={handleDrop}>
-              <UploadCloud className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600 mb-3" />
-              <p className="text-gray-600 dark:text-gray-400 mb-2">Arraste e solte seu PDF aqui, ou</p>
-              <input
-                type="file"
-                id="pdf-upload"
-                className="hidden"
-                accept="application/pdf"
-                onChange={handlePdfUpload}
-              />
-              <Label htmlFor="pdf-upload" className="cursor-pointer text-orange-500 hover:text-orange-400 font-medium">
-                Selecionar PDF
-              </Label>
-              {pdfFile && (
-                <div className="mt-2 flex items-center justify-center space-x-2">
-                  <p className="text-sm text-gray-500 dark:text-gray-300">Arquivo selecionado: {pdfFile.name}</p>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-7 px-2">
-                        <Eye className="mr-1 h-4 w-4" /> Visualizar
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-4xl h-[90vh]">
-                      <DialogHeader>
-                        <DialogTitle>Visualizar PDF</DialogTitle>
-                      </DialogHeader>
-                      {pdfPreviewUrl && (
-                        <iframe src={pdfPreviewUrl} className="w-full h-full border-none" title="Prévia do PDF"></iframe>
-                      )}
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              )}
-            </div>
           </div>
         </form>
 
@@ -414,6 +391,63 @@ const Budgets = () => {
           </Button>
         </div>
       </main>
+
+      {/* Hidden content for PDF generation */}
+      <div ref={pdfContentRef} className="p-8 bg-white text-gray-900 w-[210mm] min-h-[297mm] mx-auto hidden">
+        <div className="flex justify-between items-center mb-8 border-b pb-4">
+          <div className="flex items-center">
+            {companySettings.logo_url && (
+              <img src={companySettings.logo_url} alt="Logo da Empresa" className="h-20 mr-4 object-contain" />
+            )}
+            <div>
+              <h2 className="text-2xl font-bold">{companySettings.company_name || "Nome da Empresa"}</h2>
+              <p className="text-sm">{companySettings.address || "Endereço da Empresa"}</p>
+              <p className="text-sm">CNPJ: {companySettings.cnpj || "XX.XXX.XXX/XXXX-XX"}</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-lg font-semibold">ORÇAMENTO Nº: {formData.budgetNumber}</p>
+            <p className="text-sm">Data: {date ? format(date, "dd/MM/yyyy", { locale: ptBR }) : "N/A"}</p>
+            <p className="text-sm">Telefone: {companySettings.phone || "(XX) XXXX-XXXX"}</p>
+            <p className="text-sm">Email: {companySettings.email || "contato@empresa.com"}</p>
+          </div>
+        </div>
+
+        <div className="mb-8">
+          <h3 className="text-xl font-semibold mb-2">Dados do Cliente</h3>
+          <p>Nome: {formData.clientName || "N/A"}</p>
+        </div>
+
+        <div className="mb-8">
+          <h3 className="text-xl font-semibold mb-2">Descrição dos Serviços</h3>
+          <p className="whitespace-pre-wrap">{formData.description || "N/A"}</p>
+        </div>
+
+        <div className="mb-8">
+          <h3 className="text-xl font-semibold mb-2">Detalhes do Orçamento</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p><strong>Duração Estimada:</strong> {formData.duration || "N/A"}</p>
+              <p><strong>Validade do Orçamento:</strong> {formData.validityDays ? `${formData.validityDays} dias` : "N/A"}</p>
+              <p><strong>Forma de Pagamento:</strong> {formData.paymentMethod || "N/A"}</p>
+            </div>
+            <div className="text-right">
+              <p><strong>Valor com Material:</strong> R$ {parseFloat(formData.valueWithMaterial || "0").toFixed(2)}</p>
+              <p><strong>Valor sem Material:</strong> R$ {parseFloat(formData.valueWithoutMaterial || "0").toFixed(2)}</p>
+              <p className="text-xl font-bold mt-2">Total: R$ {(parseFloat(formData.valueWithMaterial || "0") + parseFloat(formData.valueWithoutMaterial || "0")).toFixed(2)}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-8">
+          <h3 className="text-xl font-semibold mb-2">Observações Adicionais</h3>
+          <p className="whitespace-pre-wrap">{formData.additionalNotes || "N/A"}</p>
+        </div>
+
+        <div className="text-center mt-12 pt-4 border-t">
+          <p className="text-sm text-gray-600">Agradecemos a preferência!</p>
+        </div>
+      </div>
     </div>
   );
 };

@@ -22,15 +22,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Trash2, CheckCircle, Clock, Eye } from "lucide-react";
+import { Trash2, CheckCircle, Clock, Eye, Share2 } from "lucide-react"; // Adicionado Share2
 import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface Budget {
   id: string;
   client_id?: string;
-  client_name_text?: string; // Nova propriedade para o nome do cliente digitado
-  clients?: { name: string }; // Nested client data (ainda pode existir para orçamentos antigos)
+  client_name_text?: string;
+  clients?: { name: string };
   budget_number: string;
   description?: string;
   additional_notes?: string;
@@ -85,7 +85,7 @@ const BudgetList = () => {
       toast.error("Erro ao excluir orçamento: " + error.message);
     } else {
       toast.success("Orçamento excluído com sucesso!");
-      fetchBudgets(); // Refresh the list
+      fetchBudgets();
     }
     setLoading(false);
   };
@@ -99,9 +99,19 @@ const BudgetList = () => {
       toast.error("Erro ao atualizar status: " + error.message);
     } else {
       toast.success(`Orçamento marcado como ${newStatus} com sucesso!`);
-      fetchBudgets(); // Refresh the list
+      fetchBudgets();
     }
     setLoading(false);
+  };
+
+  const handleShareOnWhatsApp = (budget: Budget) => {
+    if (budget.pdf_url) {
+      const clientName = budget.client_name_text || budget.clients?.name || 'cliente';
+      const whatsappMessage = `Olá ${clientName}! Segue o orçamento ${budget.budget_number}: ${budget.pdf_url}`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`, '_blank');
+    } else {
+      toast.error("URL do PDF não disponível para este orçamento.");
+    }
   };
 
   if (loading) {
@@ -154,7 +164,7 @@ const BudgetList = () => {
                 {budgets.map((budget) => (
                   <TableRow key={budget.id}>
                     <TableCell className="font-medium">{budget.budget_number}</TableCell>
-                    <TableCell>{budget.client_name_text || budget.clients?.name || "N/A"}</TableCell> {/* Exibe o nome digitado ou o nome do cliente vinculado */}
+                    <TableCell>{budget.client_name_text || budget.clients?.name || "N/A"}</TableCell>
                     <TableCell>{budget.budget_date ? format(new Date(budget.budget_date), "dd/MM/yyyy") : "N/A"}</TableCell>
                     <TableCell>R$ {((budget.value_with_material || 0) + (budget.value_without_material || 0)).toFixed(2)}</TableCell>
                     <TableCell>
@@ -164,19 +174,24 @@ const BudgetList = () => {
                     </TableCell>
                     <TableCell className="text-right flex justify-end space-x-2">
                       {budget.pdf_url && (
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-4xl h-[90vh]">
-                            <DialogHeader>
-                              <DialogTitle>Visualizar PDF do Orçamento {budget.budget_number}</DialogTitle>
-                            </DialogHeader>
-                            <iframe src={budget.pdf_url} className="w-full h-full border-none" title={`Prévia do PDF do Orçamento ${budget.budget_number}`}></iframe>
-                          </DialogContent>
-                        </Dialog>
+                        <>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="outline" size="sm" title="Visualizar PDF">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-4xl h-[90vh]">
+                              <DialogHeader>
+                                <DialogTitle>Visualizar PDF do Orçamento {budget.budget_number}</DialogTitle>
+                              </DialogHeader>
+                              <iframe src={budget.pdf_url} className="w-full h-full border-none" title={`Prévia do PDF do Orçamento ${budget.budget_number}`}></iframe>
+                            </DialogContent>
+                          </Dialog>
+                          <Button variant="outline" size="sm" onClick={() => handleShareOnWhatsApp(budget)} title="Compartilhar no WhatsApp">
+                            <Share2 className="h-4 w-4" />
+                          </Button>
+                        </>
                       )}
                       <Button
                         variant="outline"
@@ -184,6 +199,7 @@ const BudgetList = () => {
                         onClick={() => handleUpdateBudgetStatus(budget.id, "Finalizado")}
                         disabled={budget.status === "Finalizado"}
                         className={budget.status === "Finalizado" ? "opacity-50 cursor-not-allowed" : ""}
+                        title="Marcar como Finalizado"
                       >
                         <CheckCircle className="h-4 w-4 mr-1" /> Finalizado
                       </Button>
@@ -193,12 +209,13 @@ const BudgetList = () => {
                         onClick={() => handleUpdateBudgetStatus(budget.id, "Pendente")}
                         disabled={budget.status === "Pendente"}
                         className={budget.status === "Pendente" ? "opacity-50 cursor-not-allowed" : ""}
+                        title="Marcar como Pendente"
                       >
                         <Clock className="h-4 w-4 mr-1" /> Pendente
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="sm">
+                          <Button variant="destructive" size="sm" title="Excluir Orçamento">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </AlertDialogTrigger>
