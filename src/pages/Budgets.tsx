@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Save, Eye, Mic, Share2, Download, UploadCloud, XCircle } from "lucide-react"; // Adicionado UploadCloud e XCircle
+import { CalendarIcon, Save, Eye, Mic, Share2, Download, UploadCloud, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -45,7 +45,7 @@ const Budgets = () => {
   });
   const [materialBudgetPdfFile, setMaterialBudgetPdfFile] = React.useState<File | null>(null);
   const [materialBudgetPdfFileName, setMaterialBudgetPdfFileName] = React.useState<string | null>(null);
-  const [materialBudgetPdfDisplayUrl, setMaterialBudgetPdfDisplayUrl] = React.useState<string | null>(null); // New state for display URL
+  const [materialBudgetPdfDisplayUrl, setMaterialBudgetPdfDisplayUrl] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [showPdfViewer, setShowPdfViewer] = React.useState(false);
   const [currentPdfUrl, setCurrentPdfUrl] = React.useState<string | null>(null);
@@ -149,7 +149,7 @@ const Budgets = () => {
         }
         setMaterialBudgetPdfFile(file);
         setMaterialBudgetPdfFileName(file.name);
-        setMaterialBudgetPdfDisplayUrl(URL.createObjectURL(file)); // Set local URL for display
+        setMaterialBudgetPdfDisplayUrl(URL.createObjectURL(file));
       } else {
         setMaterialBudgetPdfFile(null);
         setMaterialBudgetPdfFileName(null);
@@ -161,7 +161,7 @@ const Budgets = () => {
   const handleRemoveMaterialBudgetPdf = () => {
     setMaterialBudgetPdfFile(null);
     setMaterialBudgetPdfFileName(null);
-    setMaterialBudgetPdfDisplayUrl(null); // Clear display URL
+    setMaterialBudgetPdfDisplayUrl(null);
     const fileInput = document.getElementById("material-budget-pdf-upload") as HTMLInputElement;
     if (fileInput) {
       fileInput.value = "";
@@ -180,18 +180,31 @@ const Budgets = () => {
     return publicUrlData.publicUrl;
   };
 
-  const generatePdf = async () => {
+  const generatePdf = async (materialPdfUrl: string | null, materialPdfName: string | null) => {
     if (!pdfContentRef.current) {
       toast.error("Erro: Conteúdo do PDF não encontrado.");
       return null;
     }
 
-    const canvas = await html2canvas(pdfContentRef.current, { 
+    // Dynamically inject the material budget PDF link if available
+    const materialPdfSection = pdfContentRef.current.querySelector('#material-pdf-section');
+    if (materialPdfSection) {
+      if (materialPdfUrl && materialPdfName) {
+        materialPdfSection.innerHTML = `
+          <h3 class="text-xl font-semibold mb-2">Orçamento de Materiais da Loja</h3>
+          <p>Anexo: <a href="${materialPdfUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline">${materialPdfName}</a></p>
+        `;
+      } else {
+        materialPdfSection.innerHTML = ''; // Clear the section if no material PDF
+      }
+    }
+
+    const canvas = await html2canvas(pdfContentRef.current, {
       scale: 2,
       useCORS: true,
     });
     const imgData = canvas.toDataURL('image/png');
-    
+
     const pdf = new jsPDF('p', 'mm', 'a4');
     const imgWidth = 210;
     const pageHeight = 297;
@@ -218,25 +231,21 @@ const Budgets = () => {
     setCurrentPdfUrl(null);
     setShowPdfViewer(true);
     try {
-      // 3. Fazer upload do PDF de orçamento de materiais, se houver
       let uploadedMaterialPdfUrl: string | null = null;
       if (materialBudgetPdfFile) {
         const materialPdfPath = `material_budgets/${formData.budgetNumber}-${Date.now()}-${materialBudgetPdfFile.name}`;
         uploadedMaterialPdfUrl = await uploadFile(materialBudgetPdfFile, "material_budget_pdfs", materialPdfPath);
-        setMaterialBudgetPdfDisplayUrl(uploadedMaterialPdfUrl); // Update display URL with permanent URL
       }
 
-      // 1. Gerar o PDF do orçamento principal
-      const generatedPdfFile = await generatePdf();
+      // Generate the main budget PDF, passing the uploaded material PDF details
+      const generatedPdfFile = await generatePdf(uploadedMaterialPdfUrl, materialBudgetPdfFileName);
       if (!generatedPdfFile) {
         throw new Error("Falha ao gerar o PDF do orçamento principal.");
       }
 
-      // 2. Fazer upload do PDF do orçamento principal
       const pdfPath = `budgets/${formData.budgetNumber}-${Date.now()}.pdf`;
       const uploadedPdfUrl = await uploadFile(generatedPdfFile, "budget_pdfs", pdfPath);
 
-      // 4. Salvar dados do orçamento no Supabase
       const { error } = await supabase.from("budgets").insert([
         {
           client_id: null,
@@ -252,8 +261,8 @@ const Budgets = () => {
           payment_method: formData.paymentMethod,
           pdf_url: uploadedPdfUrl,
           logo_url: companySettings.logo_url,
-          material_budget_pdf_url: uploadedMaterialPdfUrl, // Salva a URL do PDF de materiais
-          material_budget_pdf_name: materialBudgetPdfFileName, // Salva o nome do arquivo
+          material_budget_pdf_url: uploadedMaterialPdfUrl,
+          material_budget_pdf_name: materialBudgetPdfFileName,
         },
       ]);
 
@@ -264,7 +273,6 @@ const Budgets = () => {
       toast.success("Orçamento salvo e PDF gerado com sucesso!");
       setCurrentPdfUrl(uploadedPdfUrl);
 
-      // Reset form
       setFormData({
         budgetNumber: generateBudgetNumber(),
         clientName: "",
@@ -279,7 +287,7 @@ const Budgets = () => {
       setDate(new Date());
       setMaterialBudgetPdfFile(null);
       setMaterialBudgetPdfFileName(null);
-      setMaterialBudgetPdfDisplayUrl(null); // Clear display URL after saving
+      setMaterialBudgetPdfDisplayUrl(null);
 
     } catch (error: any) {
       toast.error("Erro ao salvar orçamento: " + error.message);
@@ -332,7 +340,6 @@ const Budgets = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
-      {/* Header */}
       <header className="bg-black text-white p-4 flex flex-col sm:flex-row items-center justify-between shadow-md">
         <div className="flex items-center mb-4 sm:mb-0">
           {companySettings.logo_url ? (
@@ -542,12 +549,8 @@ const Budgets = () => {
           </div>
         </div>
 
-        {materialBudgetPdfDisplayUrl && materialBudgetPdfFileName && (
-          <div className="mb-8">
-            <h3 className="text-xl font-semibold mb-2">Orçamento de Materiais da Loja</h3>
-            <p>Anexo: <a href={materialBudgetPdfDisplayUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">{materialBudgetPdfFileName}</a></p>
-          </div>
-        )}
+        {/* Placeholder for dynamically injected material budget PDF link */}
+        <div id="material-pdf-section" className="mb-8"></div>
 
         <div className="mb-8">
           <h3 className="text-xl font-semibold mb-2">Observações Adicionais</h3>
