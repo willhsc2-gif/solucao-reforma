@@ -5,10 +5,9 @@ import { Settings as SettingsIcon } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const Home = () => {
-  // Use uma URL de imagem de um prédio moderno com fachada de vidro aqui.
-  // Exemplo: 'https://images.unsplash.com/photo-1523287562-d10202975623' (substitua por sua imagem real)
-  // Por enquanto, usaremos um placeholder.svg que já existe no projeto.
-  const backgroundImage = '/placeholder.svg';
+  // Imagem de um prédio moderno com fachada de vidro para transmitir sofisticação e confiança.
+  // Esta é uma imagem de exemplo. Você pode substituí-la pela sua imagem preferida.
+  const backgroundImage = 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
 
   return (
     <div
