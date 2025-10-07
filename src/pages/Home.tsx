@@ -1,27 +1,9 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Settings as SettingsIcon } from "lucide-react"; // Importar o ícone de configurações
 
 const Home = () => {
-  // As imagens de portfólio não são mais necessárias, pois a seção foi removida.
-  // const portfolioImages = [
-  //   {
-  //     src: "/placeholder.svg", // Substitua com os caminhos reais das imagens
-  //     alt: "Reforma de Cozinha Moderna",
-  //     title: "Reforma de Cozinha Moderna",
-  //   },
-  //   {
-  //     src: "/placeholder.svg", // Substitua com os caminhos reais das imagens
-  //     alt: "Banheiro de Luxo",
-  //     title: "Banheiro de Luxo",
-  //   },
-  //   {
-  //     src: "/placeholder.svg", // Substitua com os caminhos reais das imagens
-  //     alt: "Sala de Estar Integrada",
-  //     title: "Sala de Estar Integrada",
-  //   },
-  // ];
-
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4">
       <div className="text-center mb-12">
@@ -45,9 +27,12 @@ const Home = () => {
             Serviços Realizados
           </Button>
         </Link>
+        <Link to="/settings"> {/* Novo botão para configurações */}
+          <Button className="w-full sm:w-auto px-8 py-6 text-lg bg-gray-700 text-white hover:bg-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg shadow-lg transition-all duration-300">
+            <SettingsIcon className="mr-2 h-5 w-5" /> Configurações da Empresa
+          </Button>
+        </Link>
       </div>
-
-      {/* A seção de portfólio de imagens foi removida conforme solicitado. */}
     </div>
   );
 };

@@ -15,15 +15,26 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { v4 as uuidv4 } from 'uuid'; // Importar uuidv4
 import useSpeechToText from "@/hooks/use-speech-to-text"; // Importar o novo hook
 
+interface CompanySettings {
+  id: string;
+  company_name: string;
+  phone: string;
+  email: string;
+  cnpj: string;
+  address: string;
+  logo_url: string;
+}
+
+const SETTINGS_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'; // Fixed ID for the single company settings entry
+
 const Budgets = () => {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
-  const [logoFile, setLogoFile] = React.useState<File | null>(null);
   const [pdfFile, setPdfFile] = React.useState<File | null>(null);
   const [pdfPreviewUrl, setPdfPreviewUrl] = React.useState<string | null>(null);
-  const [logoPreviewUrl, setLogoPreviewUrl] = React.useState<string | null>(null);
+  const [companySettings, setCompanySettings] = React.useState<Partial<CompanySettings>>({});
   const [formData, setFormData] = React.useState({
     budgetNumber: "",
-    clientName: "", // Novo campo para o nome do cliente
+    clientName: "",
     description: "",
     additionalNotes: "",
     duration: "",
@@ -60,7 +71,31 @@ const Budgets = () => {
 
   React.useEffect(() => {
     setFormData((prev) => ({ ...prev, budgetNumber: generateBudgetNumber() })); // Gera o número do orçamento ao carregar
+    fetchCompanySettings();
   }, []);
+
+  const fetchCompanySettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("company_settings")
+        .select("*")
+        .eq("id", SETTINGS_ID)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 means "no rows found"
+        throw error;
+      }
+
+      if (data) {
+        setCompanySettings(data);
+      } else {
+        setCompanySettings({ company_name: "Sua Empresa", phone: "(XX) XXXX-XXXX", email: "contato@suaempresa.com", cnpj: "XX.XXX.XXX/XXXX-XX", address: "Seu Endereço" });
+      }
+    } catch (error: any) {
+      console.error("Erro ao carregar configurações da empresa para orçamento:", error);
+      toast.error("Erro ao carregar dados da empresa. Verifique as configurações.");
+    }
+  };
 
   // Efeito para atualizar a descrição com o texto reconhecido
   React.useEffect(() => {
@@ -100,14 +135,6 @@ const Budgets = () => {
     setFormData((prev) => ({ ...prev, [id.replace(/-/g, "")]: value }));
   };
 
-  const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      const file = event.target.files[0];
-      setLogoFile(file);
-      setLogoPreviewUrl(URL.createObjectURL(file));
-    }
-  };
-
   const handlePdfUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
@@ -144,11 +171,6 @@ const Budgets = () => {
   const handleSaveAndGeneratePdf = async () => {
     setLoading(true);
     try {
-      let uploadedLogoUrl: string | null = null;
-      if (logoFile) {
-        uploadedLogoUrl = await uploadFile(logoFile, "logos", `${Date.now()}-${logoFile.name}`);
-      }
-
       let uploadedPdfUrl: string | null = null;
       if (pdfFile) {
         uploadedPdfUrl = await uploadFile(pdfFile, "budget_pdfs", `${Date.now()}-${pdfFile.name}`);
@@ -168,7 +190,7 @@ const Budgets = () => {
           validity_days: parseInt(formData.validityDays) || 0,
           payment_method: formData.paymentMethod,
           pdf_url: uploadedPdfUrl,
-          logo_url: uploadedLogoUrl,
+          logo_url: companySettings.logo_url, // Usa o logo das configurações da empresa
         },
       ]);
 
@@ -190,9 +212,7 @@ const Budgets = () => {
         paymentMethod: "",
       });
       setDate(new Date());
-      setLogoFile(null);
       setPdfFile(null);
-      setLogoPreviewUrl(null);
       setPdfPreviewUrl(null);
 
     } catch (error: any) {
@@ -231,29 +251,20 @@ const Budgets = () => {
       {/* Header */}
       <header className="bg-black text-white p-4 flex flex-col sm:flex-row items-center justify-between shadow-md">
         <div className="flex items-center mb-4 sm:mb-0">
-          {logoPreviewUrl ? (
-            <img src={logoPreviewUrl} alt="Logo" className="h-12 mr-4 rounded-md object-contain" />
+          {companySettings.logo_url ? (
+            <img src={companySettings.logo_url} alt="Logo" className="h-12 mr-4 rounded-md object-contain" />
           ) : (
             <div className="h-12 w-12 bg-gray-700 flex items-center justify-center rounded-md mr-4">
               <span className="text-sm">Logo</span>
             </div>
           )}
-          <input
-            type="file"
-            id="logo-upload"
-            className="hidden"
-            accept="image/*"
-            onChange={handleLogoChange}
-          />
-          <Label htmlFor="logo-upload" className="cursor-pointer text-orange-500 hover:text-orange-400">
-            Alterar Logo
-          </Label>
+          {/* Removido o input de upload de logo daqui, agora é feito na página de configurações */}
         </div>
         <div className="text-sm text-center sm:text-right">
-          <p>Telefone: (XX) XXXX-XXXX</p>
-          <p>E-mail: contato@solucaoreformas.com</p>
-          <p>CNPJ: XX.XXX.XXX/XXXX-XX</p>
-          <p>Endereço: Rua Exemplo, 123 - Bairro, Cidade/CEP</p>
+          <p>Telefone: {companySettings.phone || "(XX) XXXX-XXXX"}</p>
+          <p>E-mail: {companySettings.email || "contato@suaempresa.com"}</p>
+          <p>CNPJ: {companySettings.cnpj || "XX.XXX.XXX/XXXX-XX"}</p>
+          <p>Endereço: {companySettings.address || "Rua Exemplo, 123 - Bairro, Cidade/CEP"}</p>
         </div>
       </header>
 

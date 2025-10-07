@@ -7,7 +7,8 @@ import Home from "./pages/Home";
 import Budgets from "./pages/Budgets";
 import Portfolio from "./pages/Portfolio";
 import PublicPortfolioView from "./pages/PublicPortfolioView";
-import BudgetList from "./pages/BudgetList"; // Importar a nova página
+import BudgetList from "./pages/BudgetList";
+import Settings from "./pages/Settings"; // Importar a nova página de configurações
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -21,9 +22,10 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/budgets" element={<Budgets />} />
-          <Route path="/budget-list" element={<BudgetList />} /> {/* Nova rota */}
+          <Route path="/budget-list" element={<BudgetList />} />
           <Route path="/portfolio" element={<Portfolio />} />
           <Route path="/portfolio-view/:publicShareId" element={<PublicPortfolioView />} />
+          <Route path="/settings" element={<Settings />} /> {/* Nova rota para configurações */}
           {/* ADICIONE TODAS AS ROTAS PERSONALIZADAS ACIMA DA ROTA CORINGA "*" */}
           <Route path="*" element={<NotFound />} />
         </Routes>
