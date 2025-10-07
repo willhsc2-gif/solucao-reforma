@@ -136,6 +136,21 @@ const Budgets = () => {
     setFormData((prev) => ({ ...prev, [id.replace(/-/g, "")]: value }));
   };
 
+  // Utility function to sanitize file names for Supabase Storage
+  const sanitizeFileName = (fileName: string) => {
+    // Remove diacritics (accents)
+    let sanitized = fileName.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    // Replace spaces with hyphens
+    sanitized = sanitized.replace(/\s+/g, "-");
+    // Remove any characters that are not alphanumeric, hyphens, underscores, or dots
+    sanitized = sanitized.replace(/[^a-zA-Z0-9-._]/g, "");
+    // Ensure no multiple hyphens
+    sanitized = sanitized.replace(/--+/g, "-");
+    // Trim hyphens from start/end
+    sanitized = sanitized.replace(/^-+|-+$/g, "");
+    return sanitized;
+  };
+
   const handleMaterialBudgetPdfChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
       const file = event.target.files[0];
@@ -148,7 +163,7 @@ const Budgets = () => {
           return;
         }
         setMaterialBudgetPdfFile(file);
-        setMaterialBudgetPdfFileName(file.name);
+        setMaterialBudgetPdfFileName(sanitizeFileName(file.name)); // Sanitize file name
         setMaterialBudgetPdfDisplayUrl(URL.createObjectURL(file));
       } else {
         setMaterialBudgetPdfFile(null);
@@ -232,8 +247,9 @@ const Budgets = () => {
     setShowPdfViewer(true);
     try {
       let uploadedMaterialPdfUrl: string | null = null;
-      if (materialBudgetPdfFile) {
-        const materialPdfPath = `material_budgets/${formData.budgetNumber}-${Date.now()}-${materialBudgetPdfFile.name}`;
+      if (materialBudgetPdfFile && materialBudgetPdfFileName) {
+        // Use the sanitized file name for the upload path
+        const materialPdfPath = `material_budgets/${formData.budgetNumber}-${Date.now()}-${materialBudgetPdfFileName}`;
         uploadedMaterialPdfUrl = await uploadFile(materialBudgetPdfFile, "material_budget_pdfs", materialPdfPath);
       }
 
