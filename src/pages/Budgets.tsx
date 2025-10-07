@@ -5,13 +5,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Save, Eye, Mic, Share2 } from "lucide-react"; // Adicionado Share2
+import { CalendarIcon, Save, Eye, Mic, Share2, Download } from "lucide-react"; // Adicionado Download
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"; // Adicionado DialogFooter
 import { v4 as uuidv4 } from 'uuid';
 import useSpeechToText from "@/hooks/use-speech-to-text";
 import jsPDF from 'jspdf';
@@ -44,6 +44,8 @@ const Budgets = () => {
     paymentMethod: "",
   });
   const [loading, setLoading] = React.useState(false);
+  const [showPdfViewer, setShowPdfViewer] = React.useState(false); // Estado para controlar a visibilidade do visualizador de PDF
+  const [currentPdfUrl, setCurrentPdfUrl] = React.useState<string | null>(null); // URL do PDF gerado
   const pdfContentRef = React.useRef<HTMLDivElement>(null); // Ref para o conteúdo do PDF
 
   const {
@@ -213,15 +215,9 @@ const Budgets = () => {
         throw error;
       }
 
-      toast.success("Orçamento salvo e PDF gerado com sucesso!", {
-        action: {
-          label: "Compartilhar no WhatsApp",
-          onClick: () => {
-            const whatsappMessage = `Olá ${formData.clientName || 'cliente'}! Segue o orçamento ${formData.budgetNumber}: ${uploadedPdfUrl}`;
-            window.open(`https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`, '_blank');
-          },
-        },
-      });
+      toast.success("Orçamento salvo e PDF gerado com sucesso!");
+      setCurrentPdfUrl(uploadedPdfUrl); // Define a URL do PDF para o visualizador
+      setShowPdfViewer(true); // Abre o visualizador de PDF
 
       // Reset form
       setFormData({
@@ -242,6 +238,24 @@ const Budgets = () => {
       console.error("Erro ao salvar orçamento:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownloadPdf = () => {
+    if (currentPdfUrl) {
+      const clientNameForFileName = formData.clientName.replace(/[^a-zA-Z0-9]/g, '_') || 'cliente';
+      const dateForFileName = date ? format(date, "yyyyMMdd") : "data_desconhecida";
+      const fileName = `Orcamento_${clientNameForFileName}_${dateForFileName}.pdf`;
+
+      const link = document.createElement('a');
+      link.href = currentPdfUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success("Download do PDF iniciado!");
+    } else {
+      toast.error("Nenhum PDF disponível para download.");
     }
   };
 
@@ -453,6 +467,30 @@ const Budgets = () => {
           <p className="text-sm text-gray-600">Agradecemos a preferência!</p>
         </div>
       </div>
+
+      {/* PDF Viewer Dialog */}
+      <Dialog open={showPdfViewer} onOpenChange={setShowPdfViewer}>
+        <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Prévia do Orçamento {formData.budgetNumber}</DialogTitle>
+          </DialogHeader>
+          <div className="flex-grow relative">
+            {currentPdfUrl ? (
+              <iframe src={currentPdfUrl} className="w-full h-full border-none rounded-md" title="Prévia do Orçamento"></iframe>
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                Não foi possível carregar o PDF.
+              </div>
+            )}
+          </div>
+          <DialogFooter className="flex justify-end space-x-2 mt-4">
+            <Button onClick={() => setShowPdfViewer(false)} variant="outline">Fechar</Button>
+            <Button onClick={handleDownloadPdf} disabled={!currentPdfUrl}>
+              <Download className="mr-2 h-4 w-4" /> Baixar PDF
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
