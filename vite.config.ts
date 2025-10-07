@@ -14,12 +14,14 @@ export default defineConfig(() => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  optimizeDeps: {
-    exclude: ['pdfjs-dist'], // Exclui pdfjs-dist do pré-bundling para evitar problemas com workers
-  },
-  build: {
-    rollupOptions: {
-      external: ['pdfjs-dist'], // Trata pdfjs-dist como dependência externa durante o build
-    },
-  },
+  // Removendo pdfjs-dist das exclusões de otimização e externalização.
+  // Isso permite que o Vite processe e inclua o worker do pdfjs-dist corretamente.
+  // optimizeDeps: {
+  //   exclude: ['pdfjs-dist'], 
+  // },
+  // build: {
+  //   rollupOptions: {
+  //     external: ['pdfjs-dist'], 
+  //   },
+  // },
 }));
