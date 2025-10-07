@@ -18,8 +18,9 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import * as pdfjs from 'pdfjs-dist';
 
-// Importa o worker do pdf.js usando o alias configurado no vite.config.ts
-import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.js';
+// Importa o worker do pdf.js diretamente como uma URL usando o sufixo ?url do Vite.
+// Isso garante que o Vite copie o arquivo para a pasta de assets e forneça o caminho correto.
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.js?url';
 
 // Configura o worker do pdf.js para carregar o script localmente
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
