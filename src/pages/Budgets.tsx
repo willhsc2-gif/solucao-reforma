@@ -5,13 +5,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Save, Eye, Mic, Share2, Download } from "lucide-react"; // Adicionado Download
+import { CalendarIcon, Save, Eye, Mic, Share2, Download, UploadCloud, XCircle } from "lucide-react"; // Adicionado UploadCloud e XCircle
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"; // Adicionado DialogFooter
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { v4 as uuidv4 } from 'uuid';
 import useSpeechToText from "@/hooks/use-speech-to-text";
 import jsPDF from 'jspdf';
@@ -43,10 +43,12 @@ const Budgets = () => {
     validityDays: "",
     paymentMethod: "",
   });
+  const [materialBudgetPdfFile, setMaterialBudgetPdfFile] = React.useState<File | null>(null);
+  const [materialBudgetPdfFileName, setMaterialBudgetPdfFileName] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
-  const [showPdfViewer, setShowPdfViewer] = React.useState(false); // Estado para controlar a visibilidade do visualizador de PDF
-  const [currentPdfUrl, setCurrentPdfUrl] = React.useState<string | null>(null); // URL do PDF gerado
-  const pdfContentRef = React.useRef<HTMLDivElement>(null); // Ref para o conteúdo do PDF
+  const [showPdfViewer, setShowPdfViewer] = React.useState(false);
+  const [currentPdfUrl, setCurrentPdfUrl] = React.useState<string | null>(null);
+  const pdfContentRef = React.useRef<HTMLDivElement>(null);
 
   const {
     isListening: isDescriptionListening,
@@ -133,6 +135,29 @@ const Budgets = () => {
     setFormData((prev) => ({ ...prev, [id.replace(/-/g, "")]: value }));
   };
 
+  const handleMaterialBudgetPdfChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      const file = event.target.files[0];
+      if (file.type !== "application/pdf") {
+        toast.error("Por favor, selecione um arquivo PDF.");
+        setMaterialBudgetPdfFile(null);
+        setMaterialBudgetPdfFileName(null);
+        return;
+      }
+      setMaterialBudgetPdfFile(file);
+      setMaterialBudgetPdfFileName(file.name);
+    }
+  };
+
+  const handleRemoveMaterialBudgetPdf = () => {
+    setMaterialBudgetPdfFile(null);
+    setMaterialBudgetPdfFileName(null);
+    const fileInput = document.getElementById("material-budget-pdf-upload") as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = "";
+    }
+  };
+
   const uploadFile = async (file: File, bucket: string, path: string) => {
     const { data, error } = await supabase.storage.from(bucket).upload(path, file, {
       cacheControl: "3600",
@@ -151,16 +176,15 @@ const Budgets = () => {
       return null;
     }
 
-    // Use html2canvas to capture the content
     const canvas = await html2canvas(pdfContentRef.current, { 
-      scale: 2, // Increase scale for better resolution
-      useCORS: true, // Enable CORS for images like the company logo
+      scale: 2,
+      useCORS: true,
     });
     const imgData = canvas.toDataURL('image/png');
     
     const pdf = new jsPDF('p', 'mm', 'a4');
-    const imgWidth = 210; // A4 width in mm
-    const pageHeight = 297; // A4 height in mm
+    const imgWidth = 210;
+    const pageHeight = 297;
     const imgHeight = canvas.height * imgWidth / canvas.width;
     let heightLeft = imgHeight;
     let position = 0;
@@ -181,20 +205,27 @@ const Budgets = () => {
 
   const handleSaveAndGeneratePdf = async () => {
     setLoading(true);
-    setCurrentPdfUrl(null); // Clear previous PDF URL
-    setShowPdfViewer(true); // Open viewer immediately with loading state
+    setCurrentPdfUrl(null);
+    setShowPdfViewer(true);
     try {
-      // 1. Gerar o PDF
+      // 1. Gerar o PDF do orçamento principal
       const generatedPdfFile = await generatePdf();
       if (!generatedPdfFile) {
-        throw new Error("Falha ao gerar o PDF.");
+        throw new Error("Falha ao gerar o PDF do orçamento principal.");
       }
 
-      // 2. Fazer upload do PDF gerado
+      // 2. Fazer upload do PDF do orçamento principal
       const pdfPath = `budgets/${formData.budgetNumber}-${Date.now()}.pdf`;
       const uploadedPdfUrl = await uploadFile(generatedPdfFile, "budget_pdfs", pdfPath);
 
-      // 3. Salvar dados do orçamento no Supabase
+      // 3. Fazer upload do PDF de orçamento de materiais, se houver
+      let uploadedMaterialPdfUrl: string | null = null;
+      if (materialBudgetPdfFile) {
+        const materialPdfPath = `material_budgets/${formData.budgetNumber}-${Date.now()}-${materialBudgetPdfFile.name}`;
+        uploadedMaterialPdfUrl = await uploadFile(materialBudgetPdfFile, "material_budget_pdfs", materialPdfPath);
+      }
+
+      // 4. Salvar dados do orçamento no Supabase
       const { error } = await supabase.from("budgets").insert([
         {
           client_id: null,
@@ -210,6 +241,8 @@ const Budgets = () => {
           payment_method: formData.paymentMethod,
           pdf_url: uploadedPdfUrl,
           logo_url: companySettings.logo_url,
+          material_budget_pdf_url: uploadedMaterialPdfUrl, // Salva a URL do PDF de materiais
+          material_budget_pdf_name: materialBudgetPdfFileName, // Salva o nome do arquivo
         },
       ]);
 
@@ -218,7 +251,7 @@ const Budgets = () => {
       }
 
       toast.success("Orçamento salvo e PDF gerado com sucesso!");
-      setCurrentPdfUrl(uploadedPdfUrl); // Define a URL do PDF para o visualizador
+      setCurrentPdfUrl(uploadedPdfUrl);
 
       // Reset form
       setFormData({
@@ -233,11 +266,13 @@ const Budgets = () => {
         paymentMethod: "",
       });
       setDate(new Date());
+      setMaterialBudgetPdfFile(null);
+      setMaterialBudgetPdfFileName(null);
 
     } catch (error: any) {
       toast.error("Erro ao salvar orçamento: " + error.message);
       console.error("Erro ao salvar orçamento:", error);
-      setCurrentPdfUrl(null); // Ensure URL is cleared on error
+      setCurrentPdfUrl(null);
     } finally {
       setLoading(false);
     }
@@ -403,6 +438,37 @@ const Budgets = () => {
               <Label htmlFor="payment-method">Forma de Pagamento</Label>
               <Input id="paymentMethod" placeholder="Ex: 50% no início, 50% na entrega" value={formData.paymentMethod} onChange={handleInputChange} />
             </div>
+            <div>
+              <Label htmlFor="material-budget-pdf-upload">Orçamento de Materiais (PDF da Loja)</Label>
+              <div className="flex items-center space-x-2 mt-2">
+                <Input
+                  id="material-budget-pdf-upload"
+                  type="file"
+                  accept="application/pdf"
+                  onChange={handleMaterialBudgetPdfChange}
+                  className="flex-grow"
+                />
+                {materialBudgetPdfFileName && (
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-600 dark:text-gray-400 truncate max-w-[150px]">{materialBudgetPdfFileName}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleRemoveMaterialBudgetPdf}
+                      title="Remover PDF"
+                    >
+                      <XCircle className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+              {!materialBudgetPdfFileName && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Opcional: Anexe um PDF de orçamento de materiais da loja.
+                </p>
+              )}
+            </div>
           </div>
         </form>
 
@@ -417,8 +483,12 @@ const Budgets = () => {
       <div ref={pdfContentRef} className="p-8 bg-white text-gray-900 w-[210mm] min-h-[297mm] mx-auto" style={{ position: 'absolute', left: '-9999px', top: '-9999px', zIndex: -1 }}>
         <div className="flex justify-between items-center mb-8 border-b pb-4">
           <div className="flex items-center">
-            {companySettings.logo_url && (
+            {companySettings.logo_url ? (
               <img src={companySettings.logo_url} alt="Logo da Empresa" className="h-20 mr-4 object-contain" />
+            ) : (
+              <div className="h-20 w-20 bg-gray-200 flex items-center justify-center rounded-md mr-4 text-gray-500">
+                <UploadCloud className="h-10 w-10" />
+              </div>
             )}
             <div>
               <h2 className="text-2xl font-bold">{companySettings.company_name || "Nome da Empresa"}</h2>
@@ -459,6 +529,13 @@ const Budgets = () => {
             </div>
           </div>
         </div>
+
+        {materialBudgetPdfUrl && materialBudgetPdfFileName && (
+          <div className="mb-8">
+            <h3 className="text-xl font-semibold mb-2">Orçamento de Materiais da Loja</h3>
+            <p>Anexo: <a href={materialBudgetPdfUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">{materialBudgetPdfFileName}</a></p>
+          </div>
+        )}
 
         <div className="mb-8">
           <h3 className="text-xl font-semibold mb-2">Observações Adicionais</h3>

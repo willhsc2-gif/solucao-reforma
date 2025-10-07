@@ -22,7 +22,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Trash2, CheckCircle, Clock, Eye, Share2 } from "lucide-react"; // Adicionado Share2
+import { Trash2, CheckCircle, Clock, Eye, Share2, FileText } from "lucide-react"; // Adicionado FileText
 import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
@@ -44,6 +44,8 @@ interface Budget {
   logo_url?: string;
   status: "Pendente" | "Finalizado";
   created_at: string;
+  material_budget_pdf_url?: string; // Nova coluna
+  material_budget_pdf_name?: string; // Nova coluna
 }
 
 const BudgetList = () => {
@@ -177,7 +179,7 @@ const BudgetList = () => {
                         <>
                           <Dialog>
                             <DialogTrigger asChild>
-                              <Button variant="outline" size="sm" title="Visualizar PDF">
+                              <Button variant="outline" size="sm" title="Visualizar PDF do Orçamento">
                                 <Eye className="h-4 w-4" />
                               </Button>
                             </DialogTrigger>
@@ -192,6 +194,21 @@ const BudgetList = () => {
                             <Share2 className="h-4 w-4" />
                           </Button>
                         </>
+                      )}
+                      {budget.material_budget_pdf_url && (
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm" title="Visualizar PDF de Materiais">
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-4xl h-[90vh]">
+                            <DialogHeader>
+                              <DialogTitle>Visualizar PDF de Materiais: {budget.material_budget_pdf_name || "Anexo"}</DialogTitle>
+                            </DialogHeader>
+                            <iframe src={budget.material_budget_pdf_url} className="w-full h-full border-none" title={`Prévia do PDF de Materiais ${budget.material_budget_pdf_name}`}></iframe>
+                          </DialogContent>
+                        </Dialog>
                       )}
                       <Button
                         variant="outline"
