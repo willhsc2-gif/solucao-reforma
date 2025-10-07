@@ -45,6 +45,7 @@ const Budgets = () => {
   });
   const [materialBudgetPdfFile, setMaterialBudgetPdfFile] = React.useState<File | null>(null);
   const [materialBudgetPdfFileName, setMaterialBudgetPdfFileName] = React.useState<string | null>(null);
+  const [materialBudgetPdfDisplayUrl, setMaterialBudgetPdfDisplayUrl] = React.useState<string | null>(null); // New state for display URL
   const [loading, setLoading] = React.useState(false);
   const [showPdfViewer, setShowPdfViewer] = React.useState(false);
   const [currentPdfUrl, setCurrentPdfUrl] = React.useState<string | null>(null);
@@ -136,22 +137,31 @@ const Budgets = () => {
   };
 
   const handleMaterialBudgetPdfChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
+    if (event.target.files) {
       const file = event.target.files[0];
-      if (file.type !== "application/pdf") {
-        toast.error("Por favor, selecione um arquivo PDF.");
+      if (file) {
+        if (file.type !== "application/pdf") {
+          toast.error("Por favor, selecione um arquivo PDF.");
+          setMaterialBudgetPdfFile(null);
+          setMaterialBudgetPdfFileName(null);
+          setMaterialBudgetPdfDisplayUrl(null);
+          return;
+        }
+        setMaterialBudgetPdfFile(file);
+        setMaterialBudgetPdfFileName(file.name);
+        setMaterialBudgetPdfDisplayUrl(URL.createObjectURL(file)); // Set local URL for display
+      } else {
         setMaterialBudgetPdfFile(null);
         setMaterialBudgetPdfFileName(null);
-        return;
+        setMaterialBudgetPdfDisplayUrl(null);
       }
-      setMaterialBudgetPdfFile(file);
-      setMaterialBudgetPdfFileName(file.name);
     }
   };
 
   const handleRemoveMaterialBudgetPdf = () => {
     setMaterialBudgetPdfFile(null);
     setMaterialBudgetPdfFileName(null);
+    setMaterialBudgetPdfDisplayUrl(null); // Clear display URL
     const fileInput = document.getElementById("material-budget-pdf-upload") as HTMLInputElement;
     if (fileInput) {
       fileInput.value = "";
@@ -208,6 +218,14 @@ const Budgets = () => {
     setCurrentPdfUrl(null);
     setShowPdfViewer(true);
     try {
+      // 3. Fazer upload do PDF de orçamento de materiais, se houver
+      let uploadedMaterialPdfUrl: string | null = null;
+      if (materialBudgetPdfFile) {
+        const materialPdfPath = `material_budgets/${formData.budgetNumber}-${Date.now()}-${materialBudgetPdfFile.name}`;
+        uploadedMaterialPdfUrl = await uploadFile(materialBudgetPdfFile, "material_budget_pdfs", materialPdfPath);
+        setMaterialBudgetPdfDisplayUrl(uploadedMaterialPdfUrl); // Update display URL with permanent URL
+      }
+
       // 1. Gerar o PDF do orçamento principal
       const generatedPdfFile = await generatePdf();
       if (!generatedPdfFile) {
@@ -217,13 +235,6 @@ const Budgets = () => {
       // 2. Fazer upload do PDF do orçamento principal
       const pdfPath = `budgets/${formData.budgetNumber}-${Date.now()}.pdf`;
       const uploadedPdfUrl = await uploadFile(generatedPdfFile, "budget_pdfs", pdfPath);
-
-      // 3. Fazer upload do PDF de orçamento de materiais, se houver
-      let uploadedMaterialPdfUrl: string | null = null;
-      if (materialBudgetPdfFile) {
-        const materialPdfPath = `material_budgets/${formData.budgetNumber}-${Date.now()}-${materialBudgetPdfFile.name}`;
-        uploadedMaterialPdfUrl = await uploadFile(materialBudgetPdfFile, "material_budget_pdfs", materialPdfPath);
-      }
 
       // 4. Salvar dados do orçamento no Supabase
       const { error } = await supabase.from("budgets").insert([
@@ -268,6 +279,7 @@ const Budgets = () => {
       setDate(new Date());
       setMaterialBudgetPdfFile(null);
       setMaterialBudgetPdfFileName(null);
+      setMaterialBudgetPdfDisplayUrl(null); // Clear display URL after saving
 
     } catch (error: any) {
       toast.error("Erro ao salvar orçamento: " + error.message);
@@ -530,10 +542,10 @@ const Budgets = () => {
           </div>
         </div>
 
-        {materialBudgetPdfUrl && materialBudgetPdfFileName && (
+        {materialBudgetPdfDisplayUrl && materialBudgetPdfFileName && (
           <div className="mb-8">
             <h3 className="text-xl font-semibold mb-2">Orçamento de Materiais da Loja</h3>
-            <p>Anexo: <a href={materialBudgetPdfUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">{materialBudgetPdfFileName}</a></p>
+            <p>Anexo: <a href={materialBudgetPdfDisplayUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">{materialBudgetPdfFileName}</a></p>
           </div>
         )}
 
