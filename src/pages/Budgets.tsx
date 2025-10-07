@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Save, Eye, Mic, Share2, Download, UploadCloud, XCircle } from "lucide-react";
+import { CalendarIcon, Save, Eye, Mic, Share2, Download, UploadCloud, XCircle, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -193,6 +193,17 @@ const Budgets = () => {
     }
     const { data: publicUrlData } = supabase.storage.from(bucket).getPublicUrl(data.path);
     return publicUrlData.publicUrl;
+  };
+
+  const formatCurrency = (value: string | number) => {
+    const num = parseFloat(String(value));
+    if (isNaN(num)) return "R$ 0,00";
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(num);
   };
 
   const generatePdf = async (materialPdfUrl: string | null, materialPdfName: string | null) => {
@@ -476,16 +487,12 @@ const Budgets = () => {
             <div>
               <Label htmlFor="material-budget-pdf-upload">Orçamento de Materiais (PDF da Loja)</Label>
               <div className="flex items-center space-x-2 mt-2">
-                <Input
-                  id="material-budget-pdf-upload"
-                  type="file"
-                  accept="application/pdf"
-                  onChange={handleMaterialBudgetPdfChange}
-                  className="flex-grow"
-                />
-                {materialBudgetPdfFileName && (
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-600 dark:text-gray-400 truncate max-w-[150px]">{materialBudgetPdfFileName}</span>
+                {materialBudgetPdfDisplayUrl ? (
+                  <>
+                    <a href={materialBudgetPdfDisplayUrl} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-2 text-blue-600 hover:underline">
+                      <FileText className="h-5 w-5" />
+                      <span className="text-sm truncate max-w-[150px]">{materialBudgetPdfFileName}</span>
+                    </a>
                     <Button
                       type="button"
                       variant="ghost"
@@ -495,10 +502,18 @@ const Budgets = () => {
                     >
                       <XCircle className="h-4 w-4 text-red-500" />
                     </Button>
-                  </div>
+                  </>
+                ) : (
+                  <Input
+                    id="material-budget-pdf-upload"
+                    type="file"
+                    accept="application/pdf"
+                    onChange={handleMaterialBudgetPdfChange}
+                    className="flex-grow"
+                  />
                 )}
               </div>
-              {!materialBudgetPdfFileName && (
+              {!materialBudgetPdfDisplayUrl && (
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   Opcional: Anexe um PDF de orçamento de materiais da loja.
                 </p>
@@ -558,9 +573,8 @@ const Budgets = () => {
               <p><strong>Forma de Pagamento:</strong> {formData.paymentMethod || "N/A"}</p>
             </div>
             <div className="text-right">
-              <p><strong>Valor com Material:</strong> R$ {parseFloat(formData.valueWithMaterial || "0").toFixed(2)}</p>
-              <p><strong>Valor sem Material:</strong> R$ {parseFloat(formData.valueWithoutMaterial || "0").toFixed(2)}</p>
-              <p className="text-xl font-bold mt-2">Total: R$ {(parseFloat(formData.valueWithMaterial || "0") + parseFloat(formData.valueWithoutMaterial || "0")).toFixed(2)}</p>
+              <p><strong>Valor com Material:</strong> {formatCurrency(formData.valueWithMaterial || "0")}</p>
+              <p><strong>Valor sem Material:</strong> {formatCurrency(formData.valueWithoutMaterial || "0")}</p>
             </div>
           </div>
         </div>

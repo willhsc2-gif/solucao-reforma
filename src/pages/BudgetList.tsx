@@ -22,9 +22,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Trash2, CheckCircle, Clock, Eye, Share2, FileText } from "lucide-react"; // Adicionado FileText
+import { Trash2, CheckCircle, Clock, Eye, Share2, FileText } from "lucide-react";
 import { format } from "date-fns";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"; // Dialog is still used for client management, but not for PDF viewing here.
 
 interface Budget {
   id: string;
@@ -44,8 +44,8 @@ interface Budget {
   logo_url?: string;
   status: "Pendente" | "Finalizado";
   created_at: string;
-  material_budget_pdf_url?: string; // Nova coluna
-  material_budget_pdf_name?: string; // Nova coluna
+  material_budget_pdf_url?: string;
+  material_budget_pdf_name?: string;
 }
 
 const BudgetList = () => {
@@ -116,6 +116,17 @@ const BudgetList = () => {
     }
   };
 
+  const formatCurrency = (value: number | undefined) => {
+    const num = parseFloat(String(value));
+    if (isNaN(num)) return "R$ 0,00";
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(num);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
@@ -168,7 +179,7 @@ const BudgetList = () => {
                     <TableCell className="font-medium">{budget.budget_number}</TableCell>
                     <TableCell>{budget.client_name_text || budget.clients?.name || "N/A"}</TableCell>
                     <TableCell>{budget.budget_date ? format(new Date(budget.budget_date), "dd/MM/yyyy") : "N/A"}</TableCell>
-                    <TableCell>R$ {((budget.value_with_material || 0) + (budget.value_without_material || 0)).toFixed(2)}</TableCell>
+                    <TableCell>{formatCurrency(((budget.value_with_material || 0) + (budget.value_without_material || 0)))}</TableCell>
                     <TableCell>
                       <Badge variant={budget.status === "Finalizado" ? "default" : "secondary"} className={budget.status === "Finalizado" ? "bg-green-500 hover:bg-green-600" : "bg-yellow-500 hover:bg-yellow-600"}>
                         {budget.status}
@@ -177,38 +188,22 @@ const BudgetList = () => {
                     <TableCell className="text-right flex justify-end space-x-2">
                       {budget.pdf_url && (
                         <>
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button variant="outline" size="sm" title="Visualizar PDF do Orçamento">
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-4xl h-[90vh]">
-                              <DialogHeader>
-                                <DialogTitle>Visualizar PDF do Orçamento {budget.budget_number}</DialogTitle>
-                              </DialogHeader>
-                              <iframe src={budget.pdf_url} className="w-full h-full border-none" title={`Prévia do PDF do Orçamento ${budget.budget_number}`}></iframe>
-                            </DialogContent>
-                          </Dialog>
+                          <a href={budget.pdf_url} target="_blank" rel="noopener noreferrer" title="Visualizar PDF do Orçamento">
+                            <Button variant="outline" size="sm">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </a>
                           <Button variant="outline" size="sm" onClick={() => handleShareOnWhatsApp(budget)} title="Compartilhar no WhatsApp">
                             <Share2 className="h-4 w-4" />
                           </Button>
                         </>
                       )}
                       {budget.material_budget_pdf_url && (
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="outline" size="sm" title="Visualizar PDF de Materiais">
-                              <FileText className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-4xl h-[90vh]">
-                            <DialogHeader>
-                              <DialogTitle>Visualizar PDF de Materiais: {budget.material_budget_pdf_name || "Anexo"}</DialogTitle>
-                            </DialogHeader>
-                            <iframe src={budget.material_budget_pdf_url} className="w-full h-full border-none" title={`Prévia do PDF de Materiais ${budget.material_budget_pdf_name}`}></iframe>
-                          </DialogContent>
-                        </Dialog>
+                        <a href={budget.material_budget_pdf_url} target="_blank" rel="noopener noreferrer" title="Visualizar PDF de Materiais">
+                          <Button variant="outline" size="sm">
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                        </a>
                       )}
                       <Button
                         variant="outline"
