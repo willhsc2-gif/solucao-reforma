@@ -5,200 +5,49 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Save, Eye, Mic, Share2, Download, UploadCloud, XCircle, FileText } from "lucide-react";
+import { CalendarIcon, Save, Mic, UploadCloud, XCircle, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { v4 as uuidv4 } from 'uuid';
-import useSpeechToText from "@/hooks/use-speech-to-text";
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-import * as pdfjs from 'pdfjs-dist';
 
-// Importa o worker do pdf.js diretamente como uma URL usando o sufixo ?url do Vite.
-// Isso garante que o Vite copie o arquivo para a pasta de assets e forneça o caminho correto.
+// Import the new modular components and hooks
+import { useBudgetForm } from "@/hooks/useBudgetForm";
+import { useCompanySettings } from "@/hooks/useCompanySettings";
+import { usePdfGeneration } from "@/hooks/usePdfGeneration";
+import BudgetPdfContent from "@/components/BudgetPdfContent";
+import PdfViewerDialog from "@/components/PdfViewerDialog";
+
+// Import the worker for pdfjs-dist
+import * as pdfjs from 'pdfjs-dist';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.js?url';
 
-// Configura o worker do pdf.js para carregar o script localmente
+// Configure pdf.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
-// Import the new PdfViewer component
-import PdfViewer from "@/components/PdfViewer";
-
-interface CompanySettings {
-  id: string;
-  company_name: string;
-  phone: string;
-  email: string;
-  cnpj: string;
-  address: string;
-  logo_url: string;
-}
-
-const SETTINGS_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
-
 const Budgets = () => {
-  const [date, setDate] = React.useState<Date | undefined>(new Date());
-  const [companySettings, setCompanySettings] = React.useState<Partial<CompanySettings>>({});
-  const [formData, setFormData] = React.useState({
-    budgetNumber: "",
-    clientName: "",
-    description: "",
-    additionalNotes: "",
-    duration: "",
-    valueWithMaterial: "",
-    valueWithoutMaterial: "",
-    validityDays: "",
-    paymentMethod: "",
-  });
-  const [materialBudgetPdfFile, setMaterialBudgetPdfFile] = React.useState<File | null>(null);
-  const [materialBudgetPdfFileName, setMaterialBudgetPdfFileName] = React.useState<string | null>(null);
-  const [materialBudgetPdfDisplayUrl, setMaterialBudgetPdfDisplayUrl] = React.useState<string | null>(null);
-  const [loading, setLoading] = React.useState(false);
-  const [showPdfViewer, setShowPdfViewer] = React.useState(false);
-  const [currentPdfUrl, setCurrentPdfUrl] = React.useState<string | null>(null);
-  const pdfContentRef = React.useRef<HTMLDivElement>(null);
-
   const {
-    isListening: isDescriptionListening,
-    transcript: descriptionTranscript,
-    toggleListening: toggleDescriptionListening,
+    formData,
+    date,
+    setDate,
+    materialBudgetPdfFile,
+    materialBudgetPdfFileName,
+    materialBudgetPdfDisplayUrl,
+    handleInputChange,
+    handleMaterialBudgetPdfChange,
+    handleRemoveMaterialBudgetPdf,
+    isDescriptionListening,
+    toggleDescriptionListening,
+    isNotesListening,
+    toggleNotesListening,
     browserSupportsSpeechRecognition,
-    clearTranscript: clearDescriptionTranscript,
-  } = useSpeechToText();
+    resetForm,
+  } = useBudgetForm();
 
-  const {
-    isListening: isNotesListening,
-    transcript: notesTranscript,
-    toggleListening: toggleNotesListening,
-    clearTranscript: clearNotesTranscript,
-  } = useSpeechToText();
+  const { companySettings, loadingCompanySettings, errorCompanySettings } = useCompanySettings();
 
-  const baseDescriptionTextRef = React.useRef('');
-  const baseNotesTextRef = React.useRef('');
-
-  const generateBudgetNumber = () => {
-    return `ORC-${uuidv4().substring(0, 8).toUpperCase()}`;
-  };
-
-  React.useEffect(() => {
-    setFormData((prev) => ({ ...prev, budgetNumber: generateBudgetNumber() }));
-    fetchCompanySettings();
-  }, []);
-
-  const fetchCompanySettings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("company_settings")
-        .select("*")
-        .eq("id", SETTINGS_ID)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
-
-      if (data) {
-        setCompanySettings(data);
-      } else {
-        setCompanySettings({ company_name: "Sua Empresa", phone: "(XX) XXXX-XXXX", email: "contato@suaempresa.com", cnpj: "XX.XXX.XXX/XXXX-XX", address: "Seu Endereço" });
-      }
-    } catch (error: any) {
-      console.error("Erro ao carregar configurações da empresa para orçamento:", error);
-      toast.error("Erro ao carregar dados da empresa. Verifique as configurações.");
-    }
-  };
-
-  React.useEffect(() => {
-    if (isDescriptionListening) {
-      setFormData((prev) => ({
-        ...prev,
-        description: baseDescriptionTextRef.current + descriptionTranscript,
-      }));
-    } else if (descriptionTranscript) {
-      setFormData((prev) => ({
-        ...prev,
-        description: baseDescriptionTextRef.current + descriptionTranscript,
-      }));
-      clearDescriptionTranscript();
-    }
-  }, [descriptionTranscript, isDescriptionListening, clearDescriptionTranscript]);
-
-  React.useEffect(() => {
-    if (isNotesListening) {
-      setFormData((prev) => ({
-        ...prev,
-        additionalNotes: baseNotesTextRef.current + notesTranscript,
-      }));
-    } else if (notesTranscript) {
-      setFormData((prev) => ({
-        ...prev,
-        additionalNotes: baseNotesTextRef.current + notesTranscript,
-      }));
-      clearNotesTranscript();
-    }
-  }, [notesTranscript, isNotesListening, clearNotesTranscript]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { id, value } = e.target;
-    setFormData((prev) => ({ ...prev, [id.replace(/-/g, "")]: value }));
-  };
-
-  const sanitizeFileName = (fileName: string) => {
-    let sanitized = fileName.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    sanitized = sanitized.replace(/\s+/g, "-");
-    sanitized = sanitized.replace(/[^a-zA-Z0-9-._]/g, "");
-    sanitized = sanitized.replace(/--+/g, "-");
-    sanitized = sanitized.replace(/^-+|-+$/g, "");
-    return sanitized;
-  };
-
-  const handleMaterialBudgetPdfChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      const file = event.target.files[0];
-      if (file) {
-        if (file.type !== "application/pdf") {
-          toast.error("Por favor, selecione um arquivo PDF.");
-          setMaterialBudgetPdfFile(null);
-          setMaterialBudgetPdfFileName(null);
-          setMaterialBudgetPdfDisplayUrl(null);
-          return;
-        }
-        setMaterialBudgetPdfFile(file);
-        setMaterialBudgetPdfFileName(sanitizeFileName(file.name));
-        setMaterialBudgetPdfDisplayUrl(URL.createObjectURL(file));
-      } else {
-        setMaterialBudgetPdfFile(null);
-        setMaterialBudgetPdfFileName(null);
-        setMaterialBudgetPdfDisplayUrl(null);
-      }
-    }
-  };
-
-  const handleRemoveMaterialBudgetPdf = () => {
-    setMaterialBudgetPdfFile(null);
-    setMaterialBudgetPdfFileName(null);
-    setMaterialBudgetPdfDisplayUrl(null);
-    const fileInput = document.getElementById("material-budget-pdf-upload") as HTMLInputElement;
-    if (fileInput) {
-      fileInput.value = "";
-    }
-  };
-
-  const uploadFile = async (file: File, bucket: string, path: string) => {
-    const { data, error } = await supabase.storage.from(bucket).upload(path, file, {
-      cacheControl: "3600",
-      upsert: false,
-    });
-    if (error) {
-      throw error;
-    }
-    const { data: publicUrlData } = supabase.storage.from(bucket).getPublicUrl(data.path);
-    return publicUrlData.publicUrl;
-  };
+  const pdfContentRef = React.useRef<HTMLDivElement>(null);
+  const [showPdfViewer, setShowPdfViewer] = React.useState(false);
 
   const formatCurrency = (value: string | number) => {
     const num = parseFloat(String(value));
@@ -211,185 +60,20 @@ const Budgets = () => {
     }).format(num);
   };
 
-  const generateMainPdfContent = async () => {
-    if (!pdfContentRef.current) {
-      throw new Error("Erro: Conteúdo do PDF não encontrado.");
-    }
+  const { loadingPdf, currentPdfUrl, handleSaveAndGeneratePdf } = usePdfGeneration(
+    formData,
+    date,
+    companySettings,
+    materialBudgetPdfFile,
+    materialBudgetPdfFileName,
+    pdfContentRef,
+    formatCurrency,
+    resetForm
+  );
 
-    // Temporarily remove the material-pdf-section content for html2canvas,
-    // as we will add PDF pages directly later.
-    const materialPdfSection = pdfContentRef.current.querySelector('#material-pdf-section');
-    let originalMaterialPdfSectionContent = '';
-    if (materialPdfSection) {
-      originalMaterialPdfSectionContent = materialPdfSection.innerHTML;
-      materialPdfSection.innerHTML = materialBudgetPdfFile ? '<h3 class="text-xl font-semibold mb-2">Anexo de Materiais</h3>' : '';
-    }
-
-    const canvas = await html2canvas(pdfContentRef.current, {
-      scale: 2,
-      useCORS: true,
-    });
-    const imgData = canvas.toDataURL('image/png');
-
-    // Restore original content if needed (though it's hidden, good practice)
-    if (materialPdfSection) {
-      materialPdfSection.innerHTML = originalMaterialPdfSectionContent;
-    }
-
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const imgWidth = 210;
-    const pageHeight = 297;
-    const imgHeight = canvas.height * imgWidth / canvas.width;
-    let heightLeft = imgHeight;
-    let position = 0;
-
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
-
-    while (heightLeft >= 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-    }
-
-    return pdf; // Return the jsPDF instance
-  };
-
-  const handleSaveAndGeneratePdf = async () => {
-    setLoading(true);
-    setCurrentPdfUrl(null);
-    setShowPdfViewer(true);
-    try {
-      let uploadedMaterialPdfUrl: string | null = null;
-      if (materialBudgetPdfFile && materialBudgetPdfFileName) {
-        const materialPdfPath = `material_budgets/${formData.budgetNumber}-${Date.now()}-${materialBudgetPdfFileName}`;
-        uploadedMaterialPdfUrl = await uploadFile(materialBudgetPdfFile, "material_budget_pdfs", materialPdfPath);
-      }
-
-      const pdf = await generateMainPdfContent(); // Get the jsPDF instance with main content
-
-      if (materialBudgetPdfFile) {
-        // Load and embed material budget PDF pages
-        const materialPdfData = await materialBudgetPdfFile.arrayBuffer();
-        const loadingTask = pdfjs.getDocument({ data: materialPdfData });
-        const materialPdfDoc = await loadingTask.promise;
-
-        for (let i = 1; i <= materialPdfDoc.numPages; i++) {
-          const page = await materialPdfDoc.getPage(i);
-          const viewport = page.getViewport({ scale: 1.5 }); // Adjust scale as needed
-          const canvas = document.createElement('canvas');
-          const context = canvas.getContext('2d');
-          canvas.height = viewport.height;
-          canvas.width = viewport.width;
-
-          await page.render({ canvasContext: context, viewport: viewport }).promise;
-
-          const imgData = canvas.toDataURL('image/jpeg', 0.9); // Use JPEG for smaller size
-          const imgWidth = 210; // A4 width in mm
-          const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-          pdf.addPage(); // Add a new page for each material PDF page
-          pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
-        }
-      }
-
-      const finalPdfBlob = pdf.output('blob');
-      const finalPdfFile = new File([finalPdfBlob], `orcamento-${formData.budgetNumber}.pdf`, { type: 'application/pdf' });
-
-      const pdfPath = `budgets/${formData.budgetNumber}-${Date.now()}.pdf`;
-      const uploadedPdfUrl = await uploadFile(finalPdfFile, "budget_pdfs", pdfPath);
-
-      const { error } = await supabase.from("budgets").insert([
-        {
-          client_id: null,
-          client_name_text: formData.clientName,
-          budget_number: formData.budgetNumber,
-          description: formData.description,
-          additional_notes: formData.additionalNotes,
-          duration: formData.duration,
-          budget_date: date ? format(date, "yyyy-MM-dd") : null,
-          value_with_material: parseFloat(formData.valueWithMaterial) || 0,
-          value_without_material: parseFloat(formData.valueWithoutMaterial) || 0,
-          validity_days: parseInt(formData.validityDays) || 0,
-          payment_method: formData.paymentMethod,
-          pdf_url: uploadedPdfUrl,
-          logo_url: companySettings.logo_url,
-          material_budget_pdf_url: uploadedMaterialPdfUrl,
-          material_budget_pdf_name: materialBudgetPdfFileName,
-        },
-      ]);
-
-      if (error) {
-        throw error;
-      }
-
-      toast.success("Orçamento salvo e PDF gerado com sucesso!");
-      setCurrentPdfUrl(uploadedPdfUrl);
-
-      setFormData({
-        budgetNumber: generateBudgetNumber(),
-        clientName: "",
-        description: "",
-        additionalNotes: "",
-        duration: "",
-        valueWithMaterial: "",
-        valueWithoutMaterial: "",
-        validityDays: "",
-        paymentMethod: "",
-      });
-      setDate(new Date());
-      setMaterialBudgetPdfFile(null);
-      setMaterialBudgetPdfFileName(null);
-      setMaterialBudgetPdfDisplayUrl(null);
-
-    } catch (error: any) {
-      toast.error("Erro ao salvar orçamento: " + error.message);
-      console.error("Erro ao salvar orçamento:", error);
-      setCurrentPdfUrl(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDownloadPdf = () => {
-    if (currentPdfUrl) {
-      const clientNameForFileName = formData.clientName.replace(/[^a-zA-Z0-9]/g, '_') || 'cliente';
-      const dateForFileName = date ? format(date, "yyyyMMdd") : "data_desconhecida";
-      const fileName = `Orcamento_${clientNameForFileName}_${dateForFileName}.pdf`;
-
-      const link = document.createElement('a');
-      link.href = currentPdfUrl;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      toast.success("Download do PDF iniciado!");
-    } else {
-      toast.error("Nenhum PDF disponível para download.");
-    }
-  };
-
-  const handleToggleDescriptionListening = () => {
-    if (!browserSupportsSpeechRecognition) {
-      toast.error("Seu navegador não suporta a API de Reconhecimento de Voz.");
-      return;
-    }
-    if (!isDescriptionListening) {
-      baseDescriptionTextRef.current = formData.description;
-    }
-    toggleDescriptionListening();
-  };
-
-  const handleToggleNotesListening = () => {
-    if (!browserSupportsSpeechRecognition) {
-      toast.error("Seu navegador não suporta a API de Reconhecimento de Voz.");
-      return;
-    }
-    if (!isNotesListening) {
-      baseNotesTextRef.current = formData.additionalNotes;
-    }
-    toggleNotesListening();
+  const handleGeneratePdfClick = async () => {
+    setShowPdfViewer(true); // Open the dialog immediately
+    await handleSaveAndGeneratePdf(); // Start PDF generation and saving
   };
 
   return (
@@ -432,7 +116,7 @@ const Budgets = () => {
                   type="button"
                   variant="ghost"
                   size="icon"
-                  onClick={handleToggleDescriptionListening}
+                  onClick={toggleDescriptionListening}
                   className={cn(
                     "ml-2",
                     isDescriptionListening && "bg-red-500 hover:bg-red-600 text-white"
@@ -451,7 +135,7 @@ const Budgets = () => {
                   type="button"
                   variant="ghost"
                   size="icon"
-                  onClick={handleToggleNotesListening}
+                  onClick={toggleNotesListening}
                   className={cn(
                     "ml-2",
                     isNotesListening && "bg-red-500 hover:bg-red-600 text-white"
@@ -550,97 +234,32 @@ const Budgets = () => {
         </form>
 
         <div className="mt-8 text-center">
-          <Button onClick={handleSaveAndGeneratePdf} className="px-8 py-4 text-lg bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700 rounded-lg shadow-lg transition-all duration-300" disabled={loading}>
-            {loading ? "Salvando..." : <><Save className="mr-2 h-5 w-5" /> Salvar e Gerar PDF</>}
+          <Button onClick={handleGeneratePdfClick} className="px-8 py-4 text-lg bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700 rounded-lg shadow-lg transition-all duration-300" disabled={loadingPdf}>
+            {loadingPdf ? "Salvando..." : <><Save className="mr-2 h-5 w-5" /> Salvar e Gerar PDF</>}
           </Button>
         </div>
       </main>
 
       {/* Hidden content for PDF generation */}
-      <div ref={pdfContentRef} className="p-8 bg-white text-gray-900 w-[210mm] min-h-[297mm] mx-auto" style={{ position: 'absolute', left: '-9999px', top: '-9999px', zIndex: -1 }}>
-        <div className="flex justify-between items-center mb-8 border-b pb-4">
-          <div className="flex items-center">
-            {companySettings.logo_url ? (
-              <img src={companySettings.logo_url} alt="Logo da Empresa" className="h-20 mr-4 object-contain" />
-            ) : (
-              <div className="h-20 w-20 bg-gray-200 flex items-center justify-center rounded-md mr-4 text-gray-500">
-                <UploadCloud className="h-10 w-10" />
-              </div>
-            )}
-            <div>
-              <h2 className="text-2xl font-bold">{companySettings.company_name || "Nome da Empresa"}</h2>
-              <p className="text-sm">{companySettings.address || "Endereço da Empresa"}</p>
-              <p className="text-sm">CNPJ: {companySettings.cnpj || "XX.XXX.XXX/XXXX-XX"}</p>
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="text-lg font-semibold">ORÇAMENTO Nº: {formData.budgetNumber}</p>
-            <p className="text-sm">Data: {date ? format(date, "dd/MM/yyyy", { locale: ptBR }) : "N/A"}</p>
-            <p className="text-sm">Telefone: {companySettings.phone || "(XX) XXXX-XXXX"}</p>
-            <p className="text-sm">Email: {companySettings.email || "contato@empresa.com"}</p>
-          </div>
-        </div>
-
-        <div className="mb-8">
-          <h3 className="text-xl font-semibold mb-2">Dados do Cliente</h3>
-          <p>Nome: {formData.clientName || "N/A"}</p>
-        </div>
-
-        <div className="mb-8">
-          <h3 className="text-xl font-semibold mb-2">Descrição dos Serviços</h3>
-          <p className="whitespace-pre-wrap">{formData.description || "N/A"}</p>
-        </div>
-
-        <div className="mb-8">
-          <h3 className="text-xl font-semibold mb-2">Detalhes do Orçamento</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p><strong>Duração Estimada:</strong> {formData.duration || "N/A"}</p>
-              <p><strong>Validade do Orçamento:</strong> {formData.validityDays ? `${formData.validityDays} dias` : "N/A"}</p>
-              <p><strong>Forma de Pagamento:</strong> {formData.paymentMethod || "N/A"}</p>
-            </div>
-            <div className="text-right">
-              <p><strong>Valor com Material:</strong> {formatCurrency(formData.valueWithMaterial || "0")}</p>
-              <p><strong>Valor sem Material:</strong> {formatCurrency(formData.valueWithoutMaterial || "0")}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Section for dynamically injected material budget PDF title */}
-        <div id="material-pdf-section" className="mb-8">
-          {materialBudgetPdfFile && (
-            <h3 className="text-xl font-semibold mb-2">Anexo de Materiais</h3>
-          )}
-        </div>
-
-        <div className="mb-8">
-          <h3 className="text-xl font-semibold mb-2">Observações Adicionais</h3>
-          <p className="whitespace-pre-wrap">{formData.additionalNotes || "N/A"}</p>
-        </div>
-
-        <div className="text-center mt-12 pt-4 border-t">
-          <p className="text-sm text-gray-600">Agradecemos a preferência!</p>
-        </div>
-      </div>
+      <BudgetPdfContent
+        formData={formData}
+        date={date}
+        companySettings={companySettings}
+        materialBudgetPdfFile={materialBudgetPdfFile}
+        materialBudgetPdfFileName={materialBudgetPdfFileName}
+        formatCurrency={formatCurrency}
+        pdfContentRef={pdfContentRef}
+      />
 
       {/* PDF Viewer Dialog */}
-      <Dialog open={showPdfViewer} onOpenChange={setShowPdfViewer}>
-        <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Prévia do Orçamento {formData.budgetNumber}</DialogTitle>
-          </DialogHeader>
-          <div className="flex-grow relative">
-            {/* Using the new PdfViewer component */}
-            <PdfViewer pdfUrl={currentPdfUrl || ''} />
-          </div>
-          <DialogFooter className="flex justify-end space-x-2 mt-4">
-            <Button onClick={() => setShowPdfViewer(false)} variant="outline">Fechar</Button>
-            <Button onClick={handleDownloadPdf} disabled={!currentPdfUrl}>
-              <Download className="mr-2 h-4 w-4" /> Baixar PDF
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PdfViewerDialog
+        showPdfViewer={showPdfViewer}
+        setShowPdfViewer={setShowPdfViewer}
+        currentPdfUrl={currentPdfUrl}
+        budgetNumber={formData.budgetNumber}
+        clientName={formData.clientName}
+        date={date}
+      />
     </div>
   );
 };
