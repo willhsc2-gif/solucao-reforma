@@ -17,10 +17,10 @@ import useSpeechToText from "@/hooks/use-speech-to-text";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import * as pdfjs from 'pdfjs-dist';
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.entry'; // Importa o worker diretamente
 
 // Configura o worker do pdf.js para carregar o script localmente
-pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker; // Atribui o worker importado
+// Usamos new URL() com import.meta.url para que o Vite resolva o caminho corretamente.
+pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.entry', import.meta.url).toString();
 
 interface CompanySettings {
   id: string;
