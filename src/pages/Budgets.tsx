@@ -18,9 +18,11 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import * as pdfjs from 'pdfjs-dist';
 
+// Importa o worker do pdf.js como uma URL para que o Vite o processe corretamente.
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.entry?url';
+
 // Configura o worker do pdf.js para carregar o script localmente
-// Usamos new URL() com import.meta.url para que o Vite resolva o caminho corretamente.
-pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.entry', import.meta.url).toString();
+pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 interface CompanySettings {
   id: string;
@@ -132,7 +134,7 @@ const Budgets = () => {
         ...prev,
         additionalNotes: baseNotesTextRef.current + notesTranscript,
       }));
-      clearNotesTranscript();
+      clearNotesTextRef();
     }
   }, [notesTranscript, isNotesListening, clearNotesTranscript]);
 
