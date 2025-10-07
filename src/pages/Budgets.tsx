@@ -16,6 +16,10 @@ import { v4 as uuidv4 } from 'uuid';
 import useSpeechToText from "@/hooks/use-speech-to-text";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import * as pdfjs from 'pdfjs-dist';
+
+// Configura o worker do pdf.js
+pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface CompanySettings {
   id: string;
@@ -136,17 +140,11 @@ const Budgets = () => {
     setFormData((prev) => ({ ...prev, [id.replace(/-/g, "")]: value }));
   };
 
-  // Utility function to sanitize file names for Supabase Storage
   const sanitizeFileName = (fileName: string) => {
-    // Remove diacritics (accents)
     let sanitized = fileName.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    // Replace spaces with hyphens
     sanitized = sanitized.replace(/\s+/g, "-");
-    // Remove any characters that are not alphanumeric, hyphens, underscores, or dots
     sanitized = sanitized.replace(/[^a-zA-Z0-9-._]/g, "");
-    // Ensure no multiple hyphens
     sanitized = sanitized.replace(/--+/g, "-");
-    // Trim hyphens from start/end
     sanitized = sanitized.replace(/^-+|-+$/g, "");
     return sanitized;
   };
@@ -163,7 +161,7 @@ const Budgets = () => {
           return;
         }
         setMaterialBudgetPdfFile(file);
-        setMaterialBudgetPdfFileName(sanitizeFileName(file.name)); // Sanitize file name
+        setMaterialBudgetPdfFileName(sanitizeFileName(file.name));
         setMaterialBudgetPdfDisplayUrl(URL.createObjectURL(file));
       } else {
         setMaterialBudgetPdfFile(null);
@@ -206,23 +204,18 @@ const Budgets = () => {
     }).format(num);
   };
 
-  const generatePdf = async (materialPdfUrl: string | null, materialPdfName: string | null) => {
+  const generateMainPdfContent = async () => {
     if (!pdfContentRef.current) {
-      toast.error("Erro: Conteúdo do PDF não encontrado.");
-      return null;
+      throw new Error("Erro: Conteúdo do PDF não encontrado.");
     }
 
-    // Dynamically inject the material budget PDF link if available
+    // Temporarily remove the material-pdf-section content for html2canvas,
+    // as we will add PDF pages directly later.
     const materialPdfSection = pdfContentRef.current.querySelector('#material-pdf-section');
+    let originalMaterialPdfSectionContent = '';
     if (materialPdfSection) {
-      if (materialPdfUrl && materialPdfName) {
-        materialPdfSection.innerHTML = `
-          <h3 class="text-xl font-semibold mb-2">Orçamento de Materiais da Loja</h3>
-          <p>Anexo: <a href="${materialPdfUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline">${materialPdfName}</a></p>
-        `;
-      } else {
-        materialPdfSection.innerHTML = ''; // Clear the section if no material PDF
-      }
+      originalMaterialPdfSectionContent = materialPdfSection.innerHTML;
+      materialPdfSection.innerHTML = materialBudgetPdfFile ? '<h3 class="text-xl font-semibold mb-2">Anexo de Materiais</h3>' : '';
     }
 
     const canvas = await html2canvas(pdfContentRef.current, {
@@ -230,6 +223,11 @@ const Budgets = () => {
       useCORS: true,
     });
     const imgData = canvas.toDataURL('image/png');
+
+    // Restore original content if needed (though it's hidden, good practice)
+    if (materialPdfSection) {
+      materialPdfSection.innerHTML = originalMaterialPdfSectionContent;
+    }
 
     const pdf = new jsPDF('p', 'mm', 'a4');
     const imgWidth = 210;
@@ -248,8 +246,7 @@ const Budgets = () => {
       heightLeft -= pageHeight;
     }
 
-    const pdfBlob = pdf.output('blob');
-    return new File([pdfBlob], `orcamento-${formData.budgetNumber}.pdf`, { type: 'application/pdf' });
+    return pdf; // Return the jsPDF instance
   };
 
   const handleSaveAndGeneratePdf = async () => {
@@ -259,19 +256,42 @@ const Budgets = () => {
     try {
       let uploadedMaterialPdfUrl: string | null = null;
       if (materialBudgetPdfFile && materialBudgetPdfFileName) {
-        // Use the sanitized file name for the upload path
         const materialPdfPath = `material_budgets/${formData.budgetNumber}-${Date.now()}-${materialBudgetPdfFileName}`;
         uploadedMaterialPdfUrl = await uploadFile(materialBudgetPdfFile, "material_budget_pdfs", materialPdfPath);
       }
 
-      // Generate the main budget PDF, passing the uploaded material PDF details
-      const generatedPdfFile = await generatePdf(uploadedMaterialPdfUrl, materialBudgetPdfFileName);
-      if (!generatedPdfFile) {
-        throw new Error("Falha ao gerar o PDF do orçamento principal.");
+      const pdf = await generateMainPdfContent(); // Get the jsPDF instance with main content
+
+      if (materialBudgetPdfFile) {
+        // Load and embed material budget PDF pages
+        const materialPdfData = await materialBudgetPdfFile.arrayBuffer();
+        const loadingTask = pdfjs.getDocument({ data: materialPdfData });
+        const materialPdfDoc = await loadingTask.promise;
+
+        for (let i = 1; i <= materialPdfDoc.numPages; i++) {
+          const page = await materialPdfDoc.getPage(i);
+          const viewport = page.getViewport({ scale: 1.5 }); // Adjust scale as needed
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d');
+          canvas.height = viewport.height;
+          canvas.width = viewport.width;
+
+          await page.render({ canvasContext: context, viewport: viewport }).promise;
+
+          const imgData = canvas.toDataURL('image/jpeg', 0.9); // Use JPEG for smaller size
+          const imgWidth = 210; // A4 width in mm
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+          pdf.addPage(); // Add a new page for each material PDF page
+          pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+        }
       }
 
+      const finalPdfBlob = pdf.output('blob');
+      const finalPdfFile = new File([finalPdfBlob], `orcamento-${formData.budgetNumber}.pdf`, { type: 'application/pdf' });
+
       const pdfPath = `budgets/${formData.budgetNumber}-${Date.now()}.pdf`;
-      const uploadedPdfUrl = await uploadFile(generatedPdfFile, "budget_pdfs", pdfPath);
+      const uploadedPdfUrl = await uploadFile(finalPdfFile, "budget_pdfs", pdfPath);
 
       const { error } = await supabase.from("budgets").insert([
         {
@@ -579,8 +599,12 @@ const Budgets = () => {
           </div>
         </div>
 
-        {/* Placeholder for dynamically injected material budget PDF link */}
-        <div id="material-pdf-section" className="mb-8"></div>
+        {/* Section for dynamically injected material budget PDF title */}
+        <div id="material-pdf-section" className="mb-8">
+          {materialBudgetPdfFile && (
+            <h3 className="text-xl font-semibold mb-2">Anexo de Materiais</h3>
+          )}
+        </div>
 
         <div className="mb-8">
           <h3 className="text-xl font-semibold mb-2">Observações Adicionais</h3>
