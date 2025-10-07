@@ -18,8 +18,8 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import * as pdfjs from 'pdfjs-dist';
 
-// Configura o worker do pdf.js
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// Configura o worker do pdf.js para carregar o script localmente
+pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.js', import.meta.url).toString();
 
 interface CompanySettings {
   id: string;
