@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, UploadCloud, Save, Eye } from "lucide-react";
+import { CalendarIcon, UploadCloud, Save, Eye, Mic } from "lucide-react"; // Importar Mic icon
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale"; // Importar o locale ptBR
 import { cn } from "@/lib/utils";
@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { v4 as uuidv4 } from 'uuid'; // Importar uuidv4
+import useSpeechToText from "@/hooks/use-speech-to-text"; // Importar o novo hook
 
 const Budgets = () => {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
@@ -33,6 +34,26 @@ const Budgets = () => {
   });
   const [loading, setLoading] = React.useState(false);
 
+  // Speech-to-text hooks
+  const {
+    isListening: isDescriptionListening,
+    transcript: descriptionTranscript,
+    toggleListening: toggleDescriptionListening,
+    browserSupportsSpeechRecognition,
+    clearTranscript: clearDescriptionTranscript,
+  } = useSpeechToText();
+
+  const {
+    isListening: isNotesListening,
+    transcript: notesTranscript,
+    toggleListening: toggleNotesListening,
+    clearTranscript: clearNotesTranscript,
+  } = useSpeechToText();
+
+  // Refs para armazenar o texto base antes de iniciar o reconhecimento
+  const baseDescriptionTextRef = React.useRef('');
+  const baseNotesTextRef = React.useRef('');
+
   const generateBudgetNumber = () => {
     return `ORC-${uuidv4().substring(0, 8).toUpperCase()}`; // Gera um número de orçamento único
   };
@@ -40,6 +61,39 @@ const Budgets = () => {
   React.useEffect(() => {
     setFormData((prev) => ({ ...prev, budgetNumber: generateBudgetNumber() })); // Gera o número do orçamento ao carregar
   }, []);
+
+  // Efeito para atualizar a descrição com o texto reconhecido
+  React.useEffect(() => {
+    if (isDescriptionListening) {
+      setFormData((prev) => ({
+        ...prev,
+        description: baseDescriptionTextRef.current + descriptionTranscript,
+      }));
+    } else if (descriptionTranscript) {
+      // Quando a escuta para, garante que o texto final seja aplicado e limpa o transcript do hook
+      setFormData((prev) => ({
+        ...prev,
+        description: baseDescriptionTextRef.current + descriptionTranscript,
+      }));
+      clearDescriptionTranscript();
+    }
+  }, [descriptionTranscript, isDescriptionListening, clearDescriptionTranscript]);
+
+  // Efeito para atualizar as observações adicionais com o texto reconhecido
+  React.useEffect(() => {
+    if (isNotesListening) {
+      setFormData((prev) => ({
+        ...prev,
+        additionalNotes: baseNotesTextRef.current + notesTranscript,
+      }));
+    } else if (notesTranscript) {
+      setFormData((prev) => ({
+        ...prev,
+        additionalNotes: baseNotesTextRef.current + notesTranscript,
+      }));
+      clearNotesTranscript();
+    }
+  }, [notesTranscript, isNotesListening, clearNotesTranscript]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
@@ -149,6 +203,29 @@ const Budgets = () => {
     }
   };
 
+  // Handlers para os botões de microfone
+  const handleToggleDescriptionListening = () => {
+    if (!browserSupportsSpeechRecognition) {
+      toast.error("Seu navegador não suporta a API de Reconhecimento de Voz.");
+      return;
+    }
+    if (!isDescriptionListening) {
+      baseDescriptionTextRef.current = formData.description; // Captura o texto atual do campo
+    }
+    toggleDescriptionListening();
+  };
+
+  const handleToggleNotesListening = () => {
+    if (!browserSupportsSpeechRecognition) {
+      toast.error("Seu navegador não suporta a API de Reconhecimento de Voz.");
+      return;
+    }
+    if (!isNotesListening) {
+      baseNotesTextRef.current = formData.additionalNotes; // Captura o texto atual do campo
+    }
+    toggleNotesListening();
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
       {/* Header */}
@@ -194,11 +271,41 @@ const Budgets = () => {
               <Input id="clientName" placeholder="Digite o nome do cliente" value={formData.clientName} onChange={handleInputChange} />
             </div>
             <div>
-              <Label htmlFor="services-description">Descrição dos Serviços</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="services-description">Descrição dos Serviços</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleToggleDescriptionListening}
+                  className={cn(
+                    "ml-2",
+                    isDescriptionListening && "bg-red-500 hover:bg-red-600 text-white"
+                  )}
+                  title={isDescriptionListening ? "Parar reconhecimento de voz" : "Iniciar reconhecimento de voz"}
+                >
+                  <Mic className="h-4 w-4" />
+                </Button>
+              </div>
               <Textarea id="description" placeholder="Detalhes dos serviços a serem realizados..." rows={5} value={formData.description} onChange={handleInputChange} />
             </div>
             <div>
-              <Label htmlFor="additional-notes">Observações Adicionais</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="additional-notes">Observações Adicionais</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleToggleNotesListening}
+                  className={cn(
+                    "ml-2",
+                    isNotesListening && "bg-red-500 hover:bg-red-600 text-white"
+                  )}
+                  title={isNotesListening ? "Parar reconhecimento de voz" : "Iniciar reconhecimento de voz"}
+                >
+                  <Mic className="h-4 w-4" />
+                </Button>
+              </div>
               <Textarea id="additionalNotes" placeholder="Qualquer observação relevante..." rows={3} value={formData.additionalNotes} onChange={handleInputChange} />
             </div>
             <div>
