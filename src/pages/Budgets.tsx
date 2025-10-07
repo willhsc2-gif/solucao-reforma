@@ -12,13 +12,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { v4 as uuidv4 } from 'uuid'; // Importar uuidv4
-
-interface Client {
-  id: string;
-  name: string;
-}
 
 const Budgets = () => {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
@@ -26,10 +20,9 @@ const Budgets = () => {
   const [pdfFile, setPdfFile] = React.useState<File | null>(null);
   const [pdfPreviewUrl, setPdfPreviewUrl] = React.useState<string | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = React.useState<string | null>(null);
-  const [clients, setClients] = React.useState<Client[]>([]);
-  const [selectedClient, setSelectedClient] = React.useState<string | undefined>(undefined);
   const [formData, setFormData] = React.useState({
     budgetNumber: "",
+    clientName: "", // Novo campo para o nome do cliente
     description: "",
     additionalNotes: "",
     duration: "",
@@ -45,18 +38,8 @@ const Budgets = () => {
   };
 
   React.useEffect(() => {
-    fetchClients();
     setFormData((prev) => ({ ...prev, budgetNumber: generateBudgetNumber() })); // Gera o número do orçamento ao carregar
   }, []);
-
-  const fetchClients = async () => {
-    const { data, error } = await supabase.from("clients").select("id, name");
-    if (error) {
-      toast.error("Erro ao carregar clientes: " + error.message);
-    } else {
-      setClients(data);
-    }
-  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
@@ -119,7 +102,8 @@ const Budgets = () => {
 
       const { data, error } = await supabase.from("budgets").insert([
         {
-          client_id: selectedClient,
+          client_id: null, // Não vincula a um cliente existente por ID
+          client_name_text: formData.clientName, // Salva o nome digitado
           budget_number: formData.budgetNumber,
           description: formData.description,
           additional_notes: formData.additionalNotes,
@@ -139,9 +123,10 @@ const Budgets = () => {
       }
 
       toast.success("Orçamento salvo e PDF gerado com sucesso!");
-      // Optionally reset form or navigate
+      // Reset form
       setFormData({
         budgetNumber: generateBudgetNumber(), // Gera um novo número de orçamento
+        clientName: "", // Limpa o nome do cliente
         description: "",
         additionalNotes: "",
         duration: "",
@@ -155,7 +140,6 @@ const Budgets = () => {
       setPdfFile(null);
       setLogoPreviewUrl(null);
       setPdfPreviewUrl(null);
-      setSelectedClient(undefined);
 
     } catch (error: any) {
       toast.error("Erro ao salvar orçamento: " + error.message);
@@ -206,19 +190,8 @@ const Budgets = () => {
               <Input id="budget-number" placeholder="Ex: ORC-001" value={formData.budgetNumber} readOnly />
             </div>
             <div>
-              <Label htmlFor="client-name">Vincular a um Cliente (opcional)</Label>
-              <Select onValueChange={setSelectedClient} value={selectedClient}>
-                <SelectTrigger id="client-name">
-                  <SelectValue placeholder="Selecione um cliente" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="client-name">Nome do Cliente</Label>
+              <Input id="clientName" placeholder="Digite o nome do cliente" value={formData.clientName} onChange={handleInputChange} />
             </div>
             <div>
               <Label htmlFor="services-description">Descrição dos Serviços</Label>

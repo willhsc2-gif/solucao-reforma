@@ -29,7 +29,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 interface Budget {
   id: string;
   client_id?: string;
-  clients?: { name: string }; // Nested client data
+  client_name_text?: string; // Nova propriedade para o nome do cliente digitado
+  clients?: { name: string }; // Nested client data (ainda pode existir para orçamentos antigos)
   budget_number: string;
   description?: string;
   additional_notes?: string;
@@ -153,7 +154,7 @@ const BudgetList = () => {
                 {budgets.map((budget) => (
                   <TableRow key={budget.id}>
                     <TableCell className="font-medium">{budget.budget_number}</TableCell>
-                    <TableCell>{budget.clients?.name || "N/A"}</TableCell>
+                    <TableCell>{budget.client_name_text || budget.clients?.name || "N/A"}</TableCell> {/* Exibe o nome digitado ou o nome do cliente vinculado */}
                     <TableCell>{budget.budget_date ? format(new Date(budget.budget_date), "dd/MM/yyyy") : "N/A"}</TableCell>
                     <TableCell>R$ {((budget.value_with_material || 0) + (budget.value_without_material || 0)).toFixed(2)}</TableCell>
                     <TableCell>
