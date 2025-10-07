@@ -3,12 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Home from "./pages/Home";
-import Budgets from "./pages/Budgets";
-import Portfolio from "./pages/Portfolio";
-import PublicPortfolioView from "./pages/PublicPortfolioView";
-import BudgetList from "./pages/BudgetList";
-import Settings from "./pages/Settings"; // Importar a nova página de configurações
+import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -20,13 +15,8 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/budgets" element={<Budgets />} />
-          <Route path="/budget-list" element={<BudgetList />} />
-          <Route path="/portfolio" element={<Portfolio />} />
-          <Route path="/portfolio-view/:publicShareId" element={<PublicPortfolioView />} />
-          <Route path="/settings" element={<Settings />} /> {/* Nova rota para configurações */}
-          {/* ADICIONE TODAS AS ROTAS PERSONALIZADAS ACIMA DA ROTA CORINGA "*" */}
+          <Route path="/" element={<Index />} />
+          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
