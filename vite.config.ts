@@ -12,6 +12,8 @@ export default defineConfig(() => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Adiciona um alias específico para o worker do pdfjs-dist
+      'pdfjs-dist/build/pdf.worker.entry': path.resolve(__dirname, 'node_modules/pdfjs-dist/build/pdf.worker.entry.js'),
     },
   },
   // Removendo pdfjs-dist das exclusões de otimização e externalização.
