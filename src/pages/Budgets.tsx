@@ -181,6 +181,8 @@ const Budgets = () => {
 
   const handleSaveAndGeneratePdf = async () => {
     setLoading(true);
+    setCurrentPdfUrl(null); // Clear previous PDF URL
+    setShowPdfViewer(true); // Open viewer immediately with loading state
     try {
       // 1. Gerar o PDF
       const generatedPdfFile = await generatePdf();
@@ -217,7 +219,6 @@ const Budgets = () => {
 
       toast.success("Orçamento salvo e PDF gerado com sucesso!");
       setCurrentPdfUrl(uploadedPdfUrl); // Define a URL do PDF para o visualizador
-      setShowPdfViewer(true); // Abre o visualizador de PDF
 
       // Reset form
       setFormData({
@@ -236,6 +237,7 @@ const Budgets = () => {
     } catch (error: any) {
       toast.error("Erro ao salvar orçamento: " + error.message);
       console.error("Erro ao salvar orçamento:", error);
+      setCurrentPdfUrl(null); // Ensure URL is cleared on error
     } finally {
       setLoading(false);
     }
@@ -475,7 +477,11 @@ const Budgets = () => {
             <DialogTitle>Prévia do Orçamento {formData.budgetNumber}</DialogTitle>
           </DialogHeader>
           <div className="flex-grow relative">
-            {currentPdfUrl ? (
+            {loading && !currentPdfUrl ? (
+              <div className="flex items-center justify-center h-full text-lg text-gray-700 dark:text-gray-300">
+                Gerando PDF, aguarde...
+              </div>
+            ) : currentPdfUrl ? (
               <iframe src={currentPdfUrl} className="w-full h-full border-none rounded-md" title="Prévia do Orçamento"></iframe>
             ) : (
               <div className="flex items-center justify-center h-full text-gray-500">
