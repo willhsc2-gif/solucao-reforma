@@ -7,11 +7,13 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, UploadCloud, Save, Eye } from "lucide-react";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale"; // Importar o locale ptBR
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { v4 as uuidv4 } from 'uuid'; // Importar uuidv4
 
 interface Client {
   id: string;
@@ -38,8 +40,13 @@ const Budgets = () => {
   });
   const [loading, setLoading] = React.useState(false);
 
+  const generateBudgetNumber = () => {
+    return `ORC-${uuidv4().substring(0, 8).toUpperCase()}`; // Gera um número de orçamento único
+  };
+
   React.useEffect(() => {
     fetchClients();
+    setFormData((prev) => ({ ...prev, budgetNumber: generateBudgetNumber() })); // Gera o número do orçamento ao carregar
   }, []);
 
   const fetchClients = async () => {
@@ -134,7 +141,7 @@ const Budgets = () => {
       toast.success("Orçamento salvo e PDF gerado com sucesso!");
       // Optionally reset form or navigate
       setFormData({
-        budgetNumber: "",
+        budgetNumber: generateBudgetNumber(), // Gera um novo número de orçamento
         description: "",
         additionalNotes: "",
         duration: "",
@@ -196,7 +203,7 @@ const Budgets = () => {
           <div className="space-y-4">
             <div>
               <Label htmlFor="budget-number">Número do Orçamento</Label>
-              <Input id="budget-number" placeholder="Ex: ORC-001" value={formData.budgetNumber} onChange={handleInputChange} />
+              <Input id="budget-number" placeholder="Ex: ORC-001" value={formData.budgetNumber} readOnly />
             </div>
             <div>
               <Label htmlFor="client-name">Vincular a um Cliente (opcional)</Label>
@@ -240,7 +247,7 @@ const Budgets = () => {
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date ? format(date, "PPP") : <span>Selecione uma data</span>}
+                    {date ? format(date, "PPP", { locale: ptBR }) : <span>Selecione uma data</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
