@@ -2,10 +2,10 @@ const CACHE_NAME = 'solucao-reformas-cache-v1';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/src/main.tsx',
-  '/src/App.tsx',
-  '/src/globals.css',
-  '/src/App.css',
+  // Removido /src/main.tsx, /src/App.tsx, /src/globals.css, /src/App.css
+  // Em um ambiente de produção, esses arquivos são empacotados.
+  // O Vite gera nomes de arquivo com hash, então não podemos listá-los diretamente aqui.
+  // O Service Worker deve interceptar as requisições para os assets gerados.
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
   '/icons/icon-maskable-192x192.png',
