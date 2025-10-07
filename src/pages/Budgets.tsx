@@ -149,8 +149,13 @@ const Budgets = () => {
       return null;
     }
 
-    const canvas = await html2canvas(pdfContentRef.current, { scale: 2 });
+    // Use html2canvas to capture the content
+    const canvas = await html2canvas(pdfContentRef.current, { 
+      scale: 2, // Increase scale for better resolution
+      useCORS: true, // Enable CORS for images like the company logo
+    });
     const imgData = canvas.toDataURL('image/png');
+    
     const pdf = new jsPDF('p', 'mm', 'a4');
     const imgWidth = 210; // A4 width in mm
     const pageHeight = 297; // A4 height in mm
@@ -393,7 +398,7 @@ const Budgets = () => {
       </main>
 
       {/* Hidden content for PDF generation */}
-      <div ref={pdfContentRef} className="p-8 bg-white text-gray-900 w-[210mm] min-h-[297mm] mx-auto hidden">
+      <div ref={pdfContentRef} className="p-8 bg-white text-gray-900 w-[210mm] min-h-[297mm] mx-auto" style={{ position: 'absolute', left: '-9999px', top: '-9999px', zIndex: -1 }}>
         <div className="flex justify-between items-center mb-8 border-b pb-4">
           <div className="flex items-center">
             {companySettings.logo_url && (
