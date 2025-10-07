@@ -17,9 +17,10 @@ import useSpeechToText from "@/hooks/use-speech-to-text";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import * as pdfjs from 'pdfjs-dist';
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.entry'; // Importa o worker diretamente
 
 // Configura o worker do pdf.js para carregar o script localmente
-pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.js', import.meta.url).toString();
+pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker; // Atribui o worker importado
 
 interface CompanySettings {
   id: string;
