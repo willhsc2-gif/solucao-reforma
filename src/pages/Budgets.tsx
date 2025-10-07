@@ -25,6 +25,9 @@ import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.js?url';
 // Configura o worker do pdf.js para carregar o script localmente
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
+// Import the new PdfViewer component
+import PdfViewer from "@/components/PdfViewer";
+
 interface CompanySettings {
   id: string;
   company_name: string;
@@ -135,7 +138,7 @@ const Budgets = () => {
         ...prev,
         additionalNotes: baseNotesTextRef.current + notesTranscript,
       }));
-      clearNotesTextRef();
+      clearNotesTranscript();
     }
   }, [notesTranscript, isNotesListening, clearNotesTranscript]);
 
@@ -627,17 +630,8 @@ const Budgets = () => {
             <DialogTitle>Prévia do Orçamento {formData.budgetNumber}</DialogTitle>
           </DialogHeader>
           <div className="flex-grow relative">
-            {loading && !currentPdfUrl ? (
-              <div className="flex items-center justify-center h-full text-lg text-gray-700 dark:text-gray-300">
-                Gerando PDF, aguarde...
-              </div>
-            ) : currentPdfUrl ? (
-              <iframe src={currentPdfUrl} className="w-full h-full border-none rounded-md" title="Prévia do Orçamento"></iframe>
-            ) : (
-              <div className="flex items-center justify-center h-full text-gray-500">
-                Não foi possível carregar o PDF.
-              </div>
-            )}
+            {/* Using the new PdfViewer component */}
+            <PdfViewer pdfUrl={currentPdfUrl || ''} />
           </div>
           <DialogFooter className="flex justify-end space-x-2 mt-4">
             <Button onClick={() => setShowPdfViewer(false)} variant="outline">Fechar</Button>
