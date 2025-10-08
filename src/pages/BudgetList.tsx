@@ -165,27 +165,27 @@ const BudgetList = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[100px]">Número</TableHead>
-                  <TableHead className="min-w-[120px]">Cliente</TableHead>
-                  <TableHead className="min-w-[100px]">Data</TableHead>
-                  <TableHead className="min-w-[120px]">Valor Total</TableHead>
-                  <TableHead className="min-w-[100px]">Status</TableHead>
-                  <TableHead className="text-right min-w-[280px]">Ações</TableHead>
+                  <TableHead className="w-24 md:min-w-[100px]">Número</TableHead>
+                  <TableHead className="flex-1 md:min-w-[120px]">Cliente</TableHead>
+                  <TableHead className="w-24 md:min-w-[100px]">Data</TableHead>
+                  <TableHead className="w-32 md:min-w-[120px]">Valor Total</TableHead>
+                  <TableHead className="w-24 md:min-w-[100px]">Status</TableHead>
+                  <TableHead className="text-right w-auto md:min-w-[280px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {budgets.map((budget) => (
                   <TableRow key={budget.id}>
-                    <TableCell className="font-medium">{budget.budget_number}</TableCell>
-                    <TableCell>{budget.client_name_text || budget.clients?.name || "N/A"}</TableCell>
-                    <TableCell>{budget.budget_date ? format(new Date(budget.budget_date), "dd/MM/yyyy") : "N/A"}</TableCell>
-                    <TableCell>{formatCurrency(((budget.value_with_material || 0) + (budget.value_without_material || 0)))}</TableCell>
-                    <TableCell>
+                    <TableCell className="font-medium whitespace-nowrap">{budget.budget_number}</TableCell>
+                    <TableCell className="whitespace-nowrap">{budget.client_name_text || budget.clients?.name || "N/A"}</TableCell>
+                    <TableCell className="whitespace-nowrap">{budget.budget_date ? format(new Date(budget.budget_date), "dd/MM/yyyy") : "N/A"}</TableCell>
+                    <TableCell className="whitespace-nowrap">{formatCurrency(((budget.value_with_material || 0) + (budget.value_without_material || 0)))}</TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <Badge variant={budget.status === "Finalizado" ? "default" : "secondary"} className={budget.status === "Finalizado" ? "bg-green-500 hover:bg-green-600" : "bg-yellow-500 hover:bg-yellow-600"}>
                         {budget.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right whitespace-nowrap">
                       <div className="flex flex-wrap justify-end gap-2"> {/* Use flex-wrap and gap for responsiveness */}
                         {budget.pdf_url && (
                           <>
