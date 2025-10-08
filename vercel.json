@@ -1,9 +1,70 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "rewrites": [
+  "framework": "vite",
+  "build": {
+    "env": {
+      "VITE_SUPABASE_URL": "@vite_supabase_url",
+      "VITE_SUPABASE_ANON_KEY": "@vite_supabase_anon_key"
+    }
+  },
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "routes": [
+    // Garante que index.html nunca seja cacheado agressivamente e tenha o Content-Type correto
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "/index.html",
+      "headers": { "Cache-Control": "no-cache, no-store, must-revalidate", "Content-Type": "text/html" },
+      "dest": "/index.html"
+    },
+    // Regra explícita para o bundle JS principal (com hash no nome)
+    {
+      "src": "/assets/index-([a-zA-Z0-9]+)\\.js",
+      "headers": { "Content-Type": "application/javascript", "Cache-Control": "public, max-age=31536000, immutable" },
+      "dest": "/assets/index-$1.js"
+    },
+    // Regra explícita para o bundle CSS principal (com hash no nome)
+    {
+      "src": "/assets/index-([a-zA-Z0-9]+)\\.css",
+      "headers": { "Content-Type": "text/css", "Cache-Control": "public, max-age=31536000, immutable" },
+      "dest": "/assets/index-$1.css"
+    },
+    // Regra genérica para outros assets na pasta /assets (imagens, fontes, etc.)
+    {
+      "src": "/assets/(.*)",
+      "headers": { "Cache-Control": "public, max-age=31536000, immutable" },
+      "dest": "/assets/$1"
+    },
+    // Regra explícita para ícones PNG
+    {
+      "src": "/icons/(.*\\.png)",
+      "headers": { "Content-Type": "image/png", "Cache-Control": "public, max-age=31536000, immutable" },
+      "dest": "/icons/$1"
+    },
+    // Regra para o manifest.json, sempre revalidar
+    {
+      "src": "/manifest.json",
+      "headers": { "Content-Type": "application/manifest+json", "Cache-Control": "public, max-age=0, must-revalidate" },
+      "dest": "/manifest.json"
+    },
+    // Regra para o service-worker.js, sempre revalidar
+    {
+      "src": "/service-worker.js",
+      "headers": { "Content-Type": "application/javascript", "Cache-Control": "public, max-age=0, must-revalidate" },
+      "dest": "/service-worker.js"
+    },
+    // Outros arquivos estáticos na raiz
+    {
+      "src": "/robots.txt",
+      "dest": "/robots.txt"
+    },
+    {
+      "src": "/favicon.ico",
+      "dest": "/favicon.ico"
+    },
+    // Fallback para todas as outras rotas para index.html
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ]
 }
