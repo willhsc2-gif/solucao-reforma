@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import useSpeechToText from "@/hooks/use-speech-to-text";
 import { toast } from 'sonner';
-import { sanitizeFileName } from "@/utils/file"; // Importar a função de sanitização
+import { sanitizeFileName } from "@/utils/file";
 
 interface BudgetFormData {
   budgetNumber: string;
@@ -21,17 +21,17 @@ interface UseBudgetFormResult {
   setFormData: React.Dispatch<React.SetStateAction<BudgetFormData>>;
   date: Date | undefined;
   setDate: React.Dispatch<React.SetStateAction<Date | undefined>>;
-  materialBudgetPdfFile: File | null;
-  materialBudgetPdfFileName: string | null;
-  materialBudgetPdfDisplayUrl: string | null;
+  budgetPdfFile: File | null;
+  budgetPdfFileName: string | null;
+  budgetPdfDisplayUrl: string | null;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-  handleMaterialBudgetPdfChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  handleRemoveMaterialBudgetPdf: () => void;
+  handleBudgetPdfChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  handleRemoveBudgetPdf: () => void;
   isDescriptionListening: boolean;
   toggleDescriptionListening: () => void;
   isNotesListening: boolean;
   toggleNotesListening: () => void;
-  browserSupportsSpeechRecognition: boolean; // Adicionado aqui
+  browserSupportsSpeechRecognition: boolean;
   clearTranscript: () => void;
   resetForm: () => void;
 }
@@ -53,9 +53,9 @@ export const useBudgetForm = (): UseBudgetFormResult => {
     validityDays: "",
     paymentMethod: "",
   });
-  const [materialBudgetPdfFile, setMaterialBudgetPdfFile] = useState<File | null>(null);
-  const [materialBudgetPdfFileName, setMaterialBudgetPdfFileName] = useState<string | null>(null);
-  const [materialBudgetPdfDisplayUrl, setMaterialBudgetPdfDisplayUrl] = useState<string | null>(null);
+  const [budgetPdfFile, setBudgetPdfFile] = useState<File | null>(null);
+  const [budgetPdfFileName, setBudgetPdfFileName] = useState<string | null>(null);
+  const [budgetPdfDisplayUrl, setBudgetPdfDisplayUrl] = useState<string | null>(null);
 
   const {
     isListening: isDescriptionListening,
@@ -110,33 +110,33 @@ export const useBudgetForm = (): UseBudgetFormResult => {
     setFormData((prev) => ({ ...prev, [id.replace(/-/g, "")]: value }));
   }, []);
 
-  const handleMaterialBudgetPdfChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBudgetPdfChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
       const file = event.target.files[0];
       if (file) {
         if (file.type !== "application/pdf") {
           toast.error("Por favor, selecione um arquivo PDF.");
-          setMaterialBudgetPdfFile(null);
-          setMaterialBudgetPdfFileName(null);
-          setMaterialBudgetPdfDisplayUrl(null);
+          setBudgetPdfFile(null);
+          setBudgetPdfFileName(null);
+          setBudgetPdfDisplayUrl(null);
           return;
         }
-        setMaterialBudgetPdfFile(file);
-        setMaterialBudgetPdfFileName(sanitizeFileName(file.name));
-        setMaterialBudgetPdfDisplayUrl(URL.createObjectURL(file));
+        setBudgetPdfFile(file);
+        setBudgetPdfFileName(sanitizeFileName(file.name));
+        setBudgetPdfDisplayUrl(URL.createObjectURL(file));
       } else {
-        setMaterialBudgetPdfFile(null);
-        setMaterialBudgetPdfFileName(null);
-        setMaterialBudgetPdfDisplayUrl(null);
+        setBudgetPdfFile(null);
+        setBudgetPdfFileName(null);
+        setBudgetPdfDisplayUrl(null);
       }
     }
   }, []);
 
-  const handleRemoveMaterialBudgetPdf = useCallback(() => {
-    setMaterialBudgetPdfFile(null);
-    setMaterialBudgetPdfFileName(null);
-    setMaterialBudgetPdfDisplayUrl(null);
-    const fileInput = document.getElementById("material-budget-pdf-upload") as HTMLInputElement;
+  const handleRemoveBudgetPdf = useCallback(() => {
+    setBudgetPdfFile(null);
+    setBudgetPdfFileName(null);
+    setBudgetPdfDisplayUrl(null);
+    const fileInput = document.getElementById("budget-pdf-upload") as HTMLInputElement;
     if (fileInput) {
       fileInput.value = "";
     }
@@ -177,9 +177,9 @@ export const useBudgetForm = (): UseBudgetFormResult => {
       paymentMethod: "",
     });
     setDate(new Date());
-    setMaterialBudgetPdfFile(null);
-    setMaterialBudgetPdfFileName(null);
-    setMaterialBudgetPdfDisplayUrl(null);
+    setBudgetPdfFile(null);
+    setBudgetPdfFileName(null);
+    setBudgetPdfDisplayUrl(null);
   }, []);
 
   return {
@@ -187,18 +187,18 @@ export const useBudgetForm = (): UseBudgetFormResult => {
     setFormData,
     date,
     setDate,
-    materialBudgetPdfFile,
-    materialBudgetPdfFileName,
-    materialBudgetPdfDisplayUrl,
+    budgetPdfFile,
+    budgetPdfFileName,
+    budgetPdfDisplayUrl,
     handleInputChange,
-    handleMaterialBudgetPdfChange,
-    handleRemoveMaterialBudgetPdf,
+    handleBudgetPdfChange,
+    handleRemoveBudgetPdf,
     isDescriptionListening,
     toggleDescriptionListening: handleToggleDescriptionListening,
     isNotesListening,
     toggleNotesListening: handleToggleNotesListening,
     browserSupportsSpeechRecognition,
-    clearTranscript: clearDescriptionTranscript, // Adicionado clearTranscript aqui
+    clearTranscript: clearDescriptionTranscript,
     resetForm,
   };
 };
