@@ -44,6 +44,11 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const requestUrl = new URL(event.request.url);
 
+  // Adicionar esta verificação para ignorar esquemas não HTTP/HTTPS
+  if (!requestUrl.protocol.startsWith('http')) {
+    return; // Ignorar requisições que não são HTTP ou HTTPS (ex: chrome-extension)
+  }
+
   // Check if the request is for a static asset that should be cache-first
   if (staticUrlsToCache.includes(requestUrl.pathname)) {
     event.respondWith(
