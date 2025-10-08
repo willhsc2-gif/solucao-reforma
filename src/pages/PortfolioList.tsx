@@ -87,16 +87,28 @@ const PortfolioList = () => {
   };
 
   const handleViewPortfolio = (publicShareId: string) => {
+    if (!publicShareId) {
+      toast.error("ID de compartilhamento público não disponível para este item.");
+      return;
+    }
     window.open(`/portfolio-view/${publicShareId}`, '_blank');
   };
 
   const handleCopyLink = (publicShareId: string) => {
+    if (!publicShareId) {
+      toast.error("ID de compartilhamento público não disponível para este item.");
+      return;
+    }
     const link = `${window.location.origin}/portfolio-view/${publicShareId}`;
     navigator.clipboard.writeText(link);
     toast.success("Link copiado para a área de transferência!");
   };
 
   const handleShareOnWhatsApp = (portfolioItem: PortfolioItem) => {
+    if (!portfolioItem.public_share_id) {
+      toast.error("ID de compartilhamento público não disponível para este item.");
+      return;
+    }
     const link = `${window.location.origin}/portfolio-view/${portfolioItem.public_share_id}`;
     const message = `Confira meu novo serviço realizado: ${portfolioItem.title} - ${link}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
