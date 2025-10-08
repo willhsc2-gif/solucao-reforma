@@ -323,10 +323,10 @@ const Portfolio = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 p-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 p-4 sm:p-6">
       <div className="container mx-auto max-w-4xl">
         {/* Top Buttons */}
-        <div className="flex justify-end space-x-2 mb-8">
+        <div className="flex flex-col sm:flex-row sm:justify-end space-y-2 sm:space-y-0 sm:space-x-2 mb-8">
           <Dialog>
             <DialogTrigger asChild>
               <Button className="bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700">
@@ -376,12 +376,12 @@ const Portfolio = () => {
                 ) : (
                   <ul className="space-y-2">
                     {clients.map((client) => (
-                      <li key={client.id} className="flex items-center justify-between p-2 border rounded-md dark:border-gray-700">
+                      <li key={client.id} className="flex flex-wrap items-center justify-between p-2 border rounded-md dark:border-gray-700">
                         <div>
                           <p className="font-medium">{client.name}</p>
                           {client.phone && <p className="text-sm text-gray-600 dark:text-gray-400">{client.phone}</p>}
                         </div>
-                        <div className="flex space-x-2">
+                        <div className="flex space-x-2 mt-2 sm:mt-0">
                           <Button variant="outline" size="sm" onClick={() => openEditClientDialog(client)}>
                             <Pencil className="h-4 w-4" />
                           </Button>
