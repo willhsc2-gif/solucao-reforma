@@ -129,7 +129,7 @@ const BudgetList = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 p-4">
         <p className="text-lg text-gray-700 dark:text-gray-300">Carregando orçamentos...</p>
       </div>
     );
@@ -137,7 +137,7 @@ const BudgetList = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 p-4">
         <div className="text-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md">
           <h1 className="text-2xl font-bold text-red-600 mb-4">Erro</h1>
           <p className="text-lg text-gray-700 dark:text-gray-300">{error}</p>
@@ -148,9 +148,9 @@ const BudgetList = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 p-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 p-4 sm:p-6">
       <div className="container mx-auto">
-        <h1 className="text-3xl font-bold mb-8 text-black dark:text-white">Meus Orçamentos</h1>
+        <h1 className="text-3xl font-bold mb-8 text-black dark:text-white text-center sm:text-left">Meus Orçamentos</h1>
 
         {budgets.length === 0 ? (
           <div className="text-center p-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
@@ -165,12 +165,12 @@ const BudgetList = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Número</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Valor Total</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead className="min-w-[100px]">Número</TableHead>
+                  <TableHead className="min-w-[120px]">Cliente</TableHead>
+                  <TableHead className="min-w-[100px]">Data</TableHead>
+                  <TableHead className="min-w-[120px]">Valor Total</TableHead>
+                  <TableHead className="min-w-[100px]">Status</TableHead>
+                  <TableHead className="text-right min-w-[280px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -185,67 +185,69 @@ const BudgetList = () => {
                         {budget.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right flex justify-end space-x-2">
-                      {budget.pdf_url && (
-                        <>
-                          <a href={budget.pdf_url} target="_blank" rel="noopener noreferrer" title="Visualizar PDF do Orçamento">
+                    <TableCell className="text-right">
+                      <div className="flex flex-wrap justify-end gap-2"> {/* Use flex-wrap and gap for responsiveness */}
+                        {budget.pdf_url && (
+                          <>
+                            <a href={budget.pdf_url} target="_blank" rel="noopener noreferrer" title="Visualizar PDF do Orçamento">
+                              <Button variant="outline" size="sm">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </a>
+                            <Button variant="outline" size="sm" onClick={() => handleShareOnWhatsApp(budget)} title="Compartilhar no WhatsApp">
+                              <Share2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                        {budget.material_budget_pdf_url && (
+                          <a href={budget.material_budget_pdf_url} target="_blank" rel="noopener noreferrer" title="Visualizar PDF de Materiais">
                             <Button variant="outline" size="sm">
-                              <Eye className="h-4 w-4" />
+                              <FileText className="h-4 w-4" />
                             </Button>
                           </a>
-                          <Button variant="outline" size="sm" onClick={() => handleShareOnWhatsApp(budget)} title="Compartilhar no WhatsApp">
-                            <Share2 className="h-4 w-4" />
-                          </Button>
-                        </>
-                      )}
-                      {budget.material_budget_pdf_url && (
-                        <a href={budget.material_budget_pdf_url} target="_blank" rel="noopener noreferrer" title="Visualizar PDF de Materiais">
-                          <Button variant="outline" size="sm">
-                            <FileText className="h-4 w-4" />
-                          </Button>
-                        </a>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleUpdateBudgetStatus(budget.id, "Finalizado")}
-                        disabled={budget.status === "Finalizado"}
-                        className={budget.status === "Finalizado" ? "opacity-50 cursor-not-allowed" : ""}
-                        title="Marcar como Finalizado"
-                      >
-                        <CheckCircle className="h-4 w-4 mr-1" /> Finalizado
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleUpdateBudgetStatus(budget.id, "Pendente")}
-                        disabled={budget.status === "Pendente"}
-                        className={budget.status === "Pendente" ? "opacity-50 cursor-not-allowed" : ""}
-                        title="Marcar como Pendente"
-                      >
-                        <Clock className="h-4 w-4 mr-1" /> Pendente
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="sm" title="Excluir Orçamento">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Esta ação não pode ser desfeita. Isso excluirá permanentemente o orçamento {budget.budget_number}.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDeleteBudget(budget.id)}>
-                              Excluir
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleUpdateBudgetStatus(budget.id, "Finalizado")}
+                          disabled={budget.status === "Finalizado"}
+                          className={budget.status === "Finalizado" ? "opacity-50 cursor-not-allowed" : ""}
+                          title="Marcar como Finalizado"
+                        >
+                          <CheckCircle className="h-4 w-4 md:mr-1" /> <span className="hidden md:inline">Finalizado</span>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleUpdateBudgetStatus(budget.id, "Pendente")}
+                          disabled={budget.status === "Pendente"}
+                          className={budget.status === "Pendente" ? "opacity-50 cursor-not-allowed" : ""}
+                          title="Marcar como Pendente"
+                        >
+                          <Clock className="h-4 w-4 md:mr-1" /> <span className="hidden md:inline">Pendente</span>
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="sm" title="Excluir Orçamento">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta ação não pode ser desfeita. Isso excluirá permanentemente o orçamento {budget.budget_number}.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteBudget(budget.id)}>
+                                Excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
