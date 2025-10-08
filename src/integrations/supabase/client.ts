@@ -14,3 +14,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createClient(supabaseUrl || 'YOUR_SUPABASE_URL', supabaseAnonKey || 'YOUR_SUPABASE_ANON_KEY');
+
+// Define um ID padrão para as configurações da empresa, já que não haverá autenticação de usuário.
+export const DEFAULT_SETTINGS_ID = '00000000-0000-0000-0000-000000000000'; // Um UUID fixo para configurações globais

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, DEFAULT_SETTINGS_ID } from "@/integrations/supabase/client"; // Importar DEFAULT_SETTINGS_ID
 import { toast } from "sonner";
 
 interface CompanySettings {
-  id: string; // This will now be the user_id
+  id: string;
   company_name: string;
   phone: string;
   email: string;
@@ -17,15 +17,16 @@ interface UseCompanySettingsResult {
   loadingCompanySettings: boolean;
   errorCompanySettings: string | null;
   fetchCompanySettings: () => Promise<void>;
-  userId: string | null; // Expose userId
+  // userId não é mais exposto, pois não há login
 }
 
 export const useCompanySettings = (): UseCompanySettingsResult => {
   const [companySettings, setCompanySettings] = useState<Partial<CompanySettings>>({});
   const [loadingCompanySettings, setLoadingCompanySettings] = useState(true);
   const [errorCompanySettings, setErrorCompanySettings] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
 
+  // Remover o useEffect que obtinha a sessão do usuário
+  /*
   useEffect(() => {
     const getSession = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -40,20 +41,16 @@ export const useCompanySettings = (): UseCompanySettingsResult => {
     };
     getSession();
   }, []);
+  */
 
   const fetchCompanySettings = async () => {
-    if (!userId) {
-      setLoadingCompanySettings(false);
-      return;
-    }
-
     setLoadingCompanySettings(true);
     setErrorCompanySettings(null);
     try {
       const { data, error } = await supabase
         .from("company_settings")
         .select("*")
-        .eq("id", userId) // Use userId as the primary key
+        .eq("id", DEFAULT_SETTINGS_ID) // Usar o ID padrão
         .single();
 
       if (error && error.code !== 'PGRST116') { // PGRST116 means "no rows found"
@@ -63,8 +60,8 @@ export const useCompanySettings = (): UseCompanySettingsResult => {
       if (data) {
         setCompanySettings(data);
       } else {
-        // If no settings found for this user, initialize with default values
-        setCompanySettings({ id: userId, company_name: "Sua Empresa", phone: "(XX) XXXX-XXXX", email: "contato@suaempresa.com", cnpj: "XX.XXX.XXX/XXXX-XX", address: "Seu Endereço" });
+        // Se não houver configurações para este ID padrão, inicialize com valores padrão
+        setCompanySettings({ id: DEFAULT_SETTINGS_ID, company_name: "Sua Empresa", phone: "(XX) XXXX-XXXX", email: "contato@suaempresa.com", cnpj: "XX.XXX.XXX/XXXX-XX", address: "Seu Endereço" });
       }
     } catch (error: any) {
       console.error("Erro ao carregar configurações da empresa:", error);
@@ -76,16 +73,15 @@ export const useCompanySettings = (): UseCompanySettingsResult => {
   };
 
   useEffect(() => {
-    if (userId) {
-      fetchCompanySettings();
-    }
-  }, [userId]); // Re-fetch when userId changes
+    // Buscar configurações assim que o componente montar, sem depender de userId
+    fetchCompanySettings();
+  }, []); // Array de dependências vazio para rodar apenas uma vez
 
   return {
     companySettings,
     loadingCompanySettings,
     errorCompanySettings,
     fetchCompanySettings,
-    userId,
+    // userId não é mais retornado
   };
 };

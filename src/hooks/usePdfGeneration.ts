@@ -163,6 +163,7 @@ export const usePdfGeneration = (
           logo_url: companySettings.logo_url,
           material_budget_pdf_url: uploadedMaterialPdfUrl,
           material_budget_pdf_name: materialBudgetPdfFileName,
+          // user_id: null, // Remover user_id
         },
       ]);
 

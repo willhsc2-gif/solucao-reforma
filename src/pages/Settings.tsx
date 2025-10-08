@@ -5,14 +5,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Save, UploadCloud, Building2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, DEFAULT_SETTINGS_ID } from "@/integrations/supabase/client"; // Importar DEFAULT_SETTINGS_ID
 import { toast } from "sonner";
 import { v4 as uuidv4 } from 'uuid';
 import { sanitizeFileName } from "@/utils/file";
 import { useCompanySettings } from "@/hooks/useCompanySettings"; // Import the updated hook
 
 interface CompanySettings {
-  id: string; // Now this is the user_id
+  id: string;
   company_name: string;
   phone: string;
   email: string;
@@ -21,15 +21,12 @@ interface CompanySettings {
   logo_url: string;
 }
 
-// SETTINGS_ID is no longer needed as the ID will be the user's ID
-// const SETTINGS_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
-
 const Settings = () => {
-  const { companySettings, loadingCompanySettings, errorCompanySettings, fetchCompanySettings, userId } = useCompanySettings();
+  const { companySettings, loadingCompanySettings, errorCompanySettings, fetchCompanySettings } = useCompanySettings();
   const [localSettings, setLocalSettings] = React.useState<Partial<CompanySettings>>({});
   const [logoFile, setLogoFile] = React.useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = React.useState<string | null>(null);
-  const [saving, setSaving] = React.useState(false); // Renamed from 'loading' to avoid confusion with loadingCompanySettings
+  const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => {
     if (companySettings) {
@@ -68,22 +65,22 @@ const Settings = () => {
   const handleSaveSettings = async () => {
     setSaving(true);
     try {
-      // Explicitly get the current user session right before saving
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      // Não precisamos mais verificar o usuário, pois não há login
+      // const { data: { user }, error: authError } = await supabase.auth.getUser();
+      // if (authError || !user) {
+      //   toast.error("Você precisa estar logado para salvar as configurações da empresa.");
+      //   setSaving(false);
+      //   return;
+      // }
 
-      if (authError || !user) {
-        toast.error("Você precisa estar logado para salvar as configurações da empresa.");
-        setSaving(false);
-        return;
-      }
-
-      const currentUserId = user.id; // Use the ID from the fresh session
+      const settingsId = DEFAULT_SETTINGS_ID; // Usar o ID padrão
 
       let newLogoUrl = localSettings.logo_url;
 
       if (logoFile) {
         const sanitizedLogoFileName = sanitizeFileName(logoFile.name);
-        const filePath = `${currentUserId}/${uuidv4()}-${sanitizedLogoFileName}`; // Use currentUserId for path
+        // Usar o settingsId para o caminho do arquivo no storage
+        const filePath = `${settingsId}/${uuidv4()}-${sanitizedLogoFileName}`;
         newLogoUrl = await uploadFile(logoFile, "logos", filePath);
       }
 
@@ -91,7 +88,7 @@ const Settings = () => {
         .from("company_settings")
         .upsert(
           {
-            id: currentUserId, // Ensure this is the user's ID
+            id: settingsId, // Usar o ID padrão
             company_name: localSettings.company_name || "",
             phone: localSettings.phone || "",
             email: localSettings.email || "",
@@ -129,11 +126,11 @@ const Settings = () => {
     );
   }
 
+  // Não há mais erro de autenticação, apenas de carregamento geral
   if (errorCompanySettings) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 p-4 sm:p-6">
         <p className="text-red-500">{errorCompanySettings}</p>
-        {/* Optionally add a login/signup button here if the error is due to unauthenticated user */}
       </div>
     );
   }
@@ -218,7 +215,7 @@ const Settings = () => {
               </div>
             </div>
             <div className="flex justify-end">
-              <Button onClick={handleSaveSettings} disabled={saving || !userId} className="px-6 py-3 text-lg bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700">
+              <Button onClick={handleSaveSettings} disabled={saving} className="px-6 py-3 text-lg bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700">
                 {saving ? "Salvando..." : <><Save className="mr-2 h-5 w-5" /> Salvar Configurações</>}
               </Button>
             </div>
