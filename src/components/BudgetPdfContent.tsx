@@ -31,6 +31,7 @@ interface BudgetPdfContentProps {
   companySettings: Partial<CompanySettings>;
   materialBudgetPdfFile: File | null;
   materialBudgetPdfFileName: string | null;
+  materialPdfPageImages: string[]; // Novo prop para as imagens do PDF de materiais
   formatCurrency: (value: string | number) => string;
   pdfContentRef: React.RefObject<HTMLDivElement>;
 }
@@ -41,6 +42,7 @@ const BudgetPdfContent: React.FC<BudgetPdfContentProps> = ({
   companySettings,
   materialBudgetPdfFile,
   materialBudgetPdfFileName,
+  materialPdfPageImages, // Usar o novo prop
   formatCurrency,
   pdfContentRef,
 }) => {
@@ -94,12 +96,18 @@ const BudgetPdfContent: React.FC<BudgetPdfContentProps> = ({
         </div>
       </div>
 
-      {/* Section for dynamically injected material budget PDF title */}
-      <div id="material-pdf-section" className="mb-8">
-        {materialBudgetPdfFile && (
-          <h3 className="text-xl font-semibold mb-2">Anexo de Materiais</h3>
-        )}
-      </div>
+      {/* Section for dynamically injected material budget PDF title and images */}
+      {materialPdfPageImages.length > 0 && (
+        <div id="material-pdf-section" className="mb-8">
+          <h3 className="text-xl font-semibold mb-2">Anexo de Materiais ({materialBudgetPdfFileName})</h3>
+          {materialPdfPageImages.map((imageDataUrl, index) => (
+            <div key={`material-pdf-page-${index}`} className="mb-4 border border-gray-200 p-2 rounded-md">
+              <p className="text-sm text-gray-600 mb-2">Página {index + 1}</p>
+              <img src={imageDataUrl} alt={`Página ${index + 1} do orçamento de materiais`} className="w-full h-auto object-contain" />
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="mb-8">
         <h3 className="text-xl font-semibold mb-2">Observações Adicionais</h3>

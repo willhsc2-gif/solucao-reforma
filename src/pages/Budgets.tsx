@@ -47,6 +47,7 @@ const Budgets = () => {
 
   const pdfContentRef = React.useRef<HTMLDivElement>(null);
   const [showPdfViewer, setShowPdfViewer] = React.useState(false);
+  const [materialPdfPageImages, setMaterialPdfPageImages] = React.useState<string[]>([]); // Novo estado
 
   const formatCurrency = (value: string | number) => {
     const num = parseFloat(String(value));
@@ -67,7 +68,8 @@ const Budgets = () => {
     materialBudgetPdfFileName,
     pdfContentRef,
     formatCurrency,
-    resetForm
+    resetForm,
+    setMaterialPdfPageImages // Passar o setter do novo estado
   );
 
   const handleGeneratePdfClick = async () => {
@@ -248,6 +250,7 @@ const Budgets = () => {
         companySettings={companySettings}
         materialBudgetPdfFile={materialBudgetPdfFile}
         materialBudgetPdfFileName={materialBudgetPdfFileName}
+        materialPdfPageImages={materialPdfPageImages} // Passar o novo estado
         formatCurrency={formatCurrency}
         pdfContentRef={pdfContentRef}
       />
