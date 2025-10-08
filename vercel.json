@@ -8,19 +8,32 @@
   },
   "routes": [
     {
+      "src": "/assets/(.*\\.js)",
+      "headers": { "Content-Type": "application/javascript" },
+      "dest": "/assets/$1"
+    },
+    {
+      "src": "/assets/(.*\\.css)",
+      "headers": { "Content-Type": "text/css" },
+      "dest": "/assets/$1"
+    },
+    {
       "src": "/assets/(.*)",
       "dest": "/assets/$1"
     },
     {
-      "src": "/icons/(.*)",
+      "src": "/icons/(.*\\.png)",
+      "headers": { "Content-Type": "image/png" },
       "dest": "/icons/$1"
     },
     {
       "src": "/manifest.json",
+      "headers": { "Content-Type": "application/manifest+json" },
       "dest": "/manifest.json"
     },
     {
       "src": "/service-worker.js",
+      "headers": { "Content-Type": "application/javascript" },
       "dest": "/service-worker.js"
     },
     {
