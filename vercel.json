@@ -34,11 +34,17 @@
       "headers": { "Cache-Control": "public, max-age=31536000, immutable" },
       "dest": "/assets/$1"
     },
-    // Regra explícita para ícones PNG
+    // Regra explícita para ícones PNG com cache revalidável
     {
       "src": "/icons/(.*\\.png)",
-      "headers": { "Content-Type": "image/png", "Cache-Control": "public, max-age=31536000, immutable" },
+      "headers": { "Content-Type": "image/png", "Cache-Control": "public, max-age=3600, must-revalidate" },
       "dest": "/icons/$1"
+    },
+    // Regra explícita para favicon.png
+    {
+      "src": "/favicon.png",
+      "headers": { "Content-Type": "image/png", "Cache-Control": "public, max-age=3600, must-revalidate" },
+      "dest": "/favicon.png"
     },
     // Regra para o manifest.json, sempre revalidar
     {
