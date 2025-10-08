@@ -9,68 +9,72 @@
   },
   "cleanUrls": true,
   "trailingSlash": false,
-  "routes": [
-    // Garante que index.html nunca seja cacheado agressivamente e tenha o Content-Type correto
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    // Headers for main index.html
     {
-      "src": "/index.html",
-      "headers": { "Cache-Control": "no-cache, no-store, must-revalidate", "Content-Type": "text/html" },
-      "dest": "/index.html"
+      "source": "/index.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+        { "key": "Content-Type", "value": "text/html" }
+      ]
     },
-    // Regra explícita para o bundle JS principal (com hash no nome)
+    // Headers for main JS bundle (with hash in name)
     {
-      "src": "/assets/index-([a-zA-Z0-9]+)\\.js",
-      "headers": { "Content-Type": "application/javascript", "Cache-Control": "public, max-age=31536000, immutable" },
-      "dest": "/assets/index-$1.js"
+      "source": "/assets/index-*.js",
+      "headers": [
+        { "key": "Content-Type", "value": "application/javascript" },
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
     },
-    // Regra explícita para o bundle CSS principal (com hash no nome)
+    // Headers for main CSS bundle (with hash in name)
     {
-      "src": "/assets/index-([a-zA-Z0-9]+)\\.css",
-      "headers": { "Content-Type": "text/css", "Cache-Control": "public, max-age=31536000, immutable" },
-      "dest": "/assets/index-$1.css"
+      "source": "/assets/index-*.css",
+      "headers": [
+        { "key": "Content-Type", "value": "text/css" },
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
     },
-    // Regra genérica para outros assets na pasta /assets (imagens, fontes, etc.)
+    // Headers for other assets in the /assets folder (images, fonts, etc.)
     {
-      "src": "/assets/(.*)",
-      "headers": { "Cache-Control": "public, max-age=31536000, immutable" },
-      "dest": "/assets/$1"
+      "source": "/assets/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
     },
-    // Regra explícita para ícones PNG com cache revalidável
+    // Headers for PNG icons with revalidatable cache
     {
-      "src": "/icons/(.*\\.png)",
-      "headers": { "Content-Type": "image/png", "Cache-Control": "public, max-age=3600, must-revalidate" },
-      "dest": "/icons/$1"
+      "source": "/icons/(.*\\.png)",
+      "headers": [
+        { "key": "Content-Type", "value": "image/png" },
+        { "key": "Cache-Control", "value": "public, max-age=3600, must-revalidate" }
+      ]
     },
-    // Regra explícita para favicon.png
+    // Headers for favicon.png
     {
-      "src": "/favicon.png",
-      "headers": { "Content-Type": "image/png", "Cache-Control": "public, max-age=3600, must-revalidate" },
-      "dest": "/favicon.png"
+      "source": "/favicon.png",
+      "headers": [
+        { "key": "Content-Type", "value": "image/png" },
+        { "key": "Cache-Control", "value": "public, max-age=3600, must-revalidate" }
+      ]
     },
-    // Regra para o manifest.json, sempre revalidar
+    // Headers for manifest.json, always revalidate
     {
-      "src": "/manifest.json",
-      "headers": { "Content-Type": "application/manifest+json", "Cache-Control": "public, max-age=0, must-revalidate" },
-      "dest": "/manifest.json"
+      "source": "/manifest.json",
+      "headers": [
+        { "key": "Content-Type", "value": "application/manifest+json" },
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
     },
-    // Regra para o service-worker.js, sempre revalidar
+    // Headers for service-worker.js, always revalidate
     {
-      "src": "/service-worker.js",
-      "headers": { "Content-Type": "application/javascript", "Cache-Control": "public, max-age=0, must-revalidate" },
-      "dest": "/service-worker.js"
-    },
-    // Outros arquivos estáticos na raiz
-    {
-      "src": "/robots.txt",
-      "dest": "/robots.txt"
-    },
-    {
-      "src": "/favicon.ico",
-      "dest": "/favicon.ico"
-    },
-    // Fallback para todas as outras rotas para index.html
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/service-worker.js",
+      "headers": [
+        { "key": "Content-Type", "value": "application/javascript" },
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
     }
   ]
 }
