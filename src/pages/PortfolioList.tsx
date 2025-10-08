@@ -14,7 +14,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Eye, Share2, Link as LinkIcon, Trash2, MessageSquareText, Pencil } from "lucide-react";
+import { Eye, Share2, Link as LinkIcon, Trash2, MessageSquareText, Pencil, Image as ImageIcon } from "lucide-react"; // Adicionado ImageIcon
 
 interface PortfolioItem {
   id: string;
