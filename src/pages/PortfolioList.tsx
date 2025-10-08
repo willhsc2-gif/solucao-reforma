@@ -22,8 +22,8 @@ interface PortfolioItem {
   title: string;
   description: string;
   public_share_id: string;
-  client_id?: string;
-  clients?: { name: string };
+  client_id?: string | null; // Permitir que client_id seja null
+  clients?: { name: string } | null; // Permitir que clients seja null
   created_at: string;
   portfolio_images: { image_url: string }[];
 }

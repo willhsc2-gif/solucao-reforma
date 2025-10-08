@@ -12,7 +12,7 @@ interface PortfolioItem {
   title: string;
   description: string;
   client_reference_contact?: string;
-  clients?: { name: string }; // Nested client data
+  clients?: { name: string } | null; // Permitir que clients seja null
 }
 
 interface PortfolioImage {
