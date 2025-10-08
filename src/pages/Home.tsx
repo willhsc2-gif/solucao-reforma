@@ -1,10 +1,27 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Settings as SettingsIcon } from "lucide-react";
+import { Settings as SettingsIcon, LogOut } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useSession } from "@/components/SessionContextProvider"; // Importar o hook de sessão
+import { supabase } from "@/integrations/supabase/client"; // Importar o cliente supabase
+import { toast } from "sonner";
 
 const Home = () => {
+  const { session } = useSession(); // Obter a sessão do contexto
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error("Erro ao fazer logout: " + error.message);
+      console.error("Erro ao fazer logout:", error);
+    } else {
+      toast.success("Logout realizado com sucesso!");
+      navigate('/login');
+    }
+  };
+
   // Imagem de um prédio moderno com fachada de vidro para transmitir sofisticação e confiança.
   // Esta é uma imagem de exemplo. Você pode substituí-la pela sua imagem preferida.
   const backgroundImage = 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
@@ -19,8 +36,20 @@ const Home = () => {
 
       {/* Conteúdo da página com animação de fade-in */}
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 animate-fade-in">
-        {/* Botão de Configurações no canto superior direito */}
-        <div className="absolute top-4 right-4">
+        {/* Botões de Configurações e Logout no canto superior direito */}
+        <div className="absolute top-4 right-4 flex space-x-2">
+          {session && ( // Mostrar botão de logout apenas se houver sessão
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" className="h-10 w-10 bg-white/20 hover:bg-white/30 text-white border-white" onClick={handleLogout}>
+                  <LogOut className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Sair</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
           <Tooltip>
             <TooltipTrigger asChild>
               <Link to="/settings">
