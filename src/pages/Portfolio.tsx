@@ -19,6 +19,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"; // Adicionado DialogFooter
 import { sanitizeFileName } from "@/utils/file"; // Importar a função de sanitização
 
 interface Client {
