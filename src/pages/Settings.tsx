@@ -66,18 +66,24 @@ const Settings = () => {
   };
 
   const handleSaveSettings = async () => {
-    if (!userId) {
-      toast.error("Você precisa estar logado para salvar as configurações da empresa.");
-      return;
-    }
-
     setSaving(true);
     try {
+      // Explicitly get the current user session right before saving
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+      if (authError || !user) {
+        toast.error("Você precisa estar logado para salvar as configurações da empresa.");
+        setSaving(false);
+        return;
+      }
+
+      const currentUserId = user.id; // Use the ID from the fresh session
+
       let newLogoUrl = localSettings.logo_url;
 
       if (logoFile) {
         const sanitizedLogoFileName = sanitizeFileName(logoFile.name);
-        const filePath = `${userId}/${uuidv4()}-${sanitizedLogoFileName}`; // Use userId for path
+        const filePath = `${currentUserId}/${uuidv4()}-${sanitizedLogoFileName}`; // Use currentUserId for path
         newLogoUrl = await uploadFile(logoFile, "logos", filePath);
       }
 
@@ -85,7 +91,7 @@ const Settings = () => {
         .from("company_settings")
         .upsert(
           {
-            id: userId, // Use userId as the ID for upsert
+            id: currentUserId, // Ensure this is the user's ID
             company_name: localSettings.company_name || "",
             phone: localSettings.phone || "",
             email: localSettings.email || "",
