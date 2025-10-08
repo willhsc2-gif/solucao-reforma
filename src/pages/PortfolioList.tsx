@@ -23,7 +23,7 @@ interface PortfolioItem {
   description: string;
   public_share_id: string;
   client_id?: string | null; // Permitir que client_id seja null
-  clients?: { name: string } | null; // Permitir que clients seja null
+  clients?: { name: string }[] | null; // Corrigido: clients agora é um array ou null
   created_at: string;
   portfolio_images: { image_url: string }[];
 }
@@ -80,7 +80,7 @@ const PortfolioList = () => {
       // Mapear os dados para garantir a tipagem correta de 'clients'
       const typedData: PortfolioItem[] = data.map(item => ({
         ...item,
-        clients: item.clients ? { name: item.clients.name } : null, // Ensure clients is { name: string } or null
+        clients: item.clients as { name: string }[] | null, // Corrigido: cast para array ou null
         portfolio_images: item.portfolio_images as { image_url: string }[],
       }));
       setPortfolioItems(typedData);
@@ -217,7 +217,7 @@ const PortfolioList = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {portfolioItems.map((item) => (
-          <Card key={item.id} className="flex flex-col">
+          <Card key={item.id} className="flex flex-col"> {/* Card principal */}
             <CardHeader>
               <div className="relative w-full h-48 bg-gray-200 dark:bg-gray-700 rounded-t-lg overflow-hidden">
                 {item.portfolio_images.length > 0 ? (
@@ -233,9 +233,9 @@ const PortfolioList = () => {
                 )}
               </div>
               <CardTitle className="mt-4">{item.title}</CardTitle>
-              {item.clients?.name && (
+              {item.clients?.[0]?.name && ( {/* Corrigido: Acessa o primeiro elemento do array */}
                 <CardDescription className="text-sm text-gray-600 dark:text-gray-400">
-                  Cliente: {item.clients.name}
+                  Cliente: {item.clients[0].name}
                 </CardDescription>
               )}
             </CardHeader>
@@ -272,8 +272,8 @@ const PortfolioList = () => {
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
-              </CardFooter>
-            </CardContent>
+              </AlertDialog>
+            </CardFooter>
           </Card>
         ))}
       </div>
