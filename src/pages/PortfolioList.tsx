@@ -5,15 +5,13 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { PlusCircle, Edit, Share2, Trash2 } from "lucide-react"; 
-import { toast } from "sonner";
+import { PlusCircle, Edit, MessageSquareText, Share2, Whatsapp } from "lucide-react";
+import { toast } from "sonner"; // Alterado de "react-hot-toast" para "sonner"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useSession } from "@/components/SessionContextProvider"; // Importar useSession
-import EditPortfolioItemDialog from "@/components/EditPortfolioItemDialog"; // Importar o novo componente de diálogo
 
 interface PortfolioItem {
   id: string;
@@ -24,8 +22,8 @@ interface PortfolioItem {
   public_share_id: string;
   client_reference_contact: string | null;
   created_at: string;
-  clients?: { name: string };
-  portfolio_images?: PortfolioImage[];
+  client_name?: string;
+  images?: PortfolioImage[];
 }
 
 interface PortfolioImage {
@@ -43,26 +41,30 @@ interface Client {
 }
 
 export default function PortfolioList() {
-  const { user } = useSession(); // Obter o usuário da sessão
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false); // Estado para o diálogo de edição
-  const [selectedPortfolioItem, setSelectedPortfolioItem] = useState<PortfolioItem | null>(null); // Item selecionado para edição
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<PortfolioItem | null>(null);
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    client_id: "",
+    client_reference_contact: "",
+  });
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user) {
-      fetchPortfolioItems();
-      fetchClients();
-    }
-  }, [user]);
+    fetchPortfolioItems();
+    fetchClients();
+  }, []);
 
   const fetchPortfolioItems = async () => {
     setLoading(true);
-    if (!user) {
-      setError("Usuário não autenticado.");
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError || !userData?.user) {
+      setError("User not authenticated.");
       setLoading(false);
       return;
     }
@@ -74,8 +76,7 @@ export default function PortfolioList() {
         clients (name),
         portfolio_images (id, image_url, description, order_index)
       `)
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
+      .eq("user_id", userData.user.id);
 
     if (error) {
       setError(error.message);
@@ -92,12 +93,16 @@ export default function PortfolioList() {
   };
 
   const fetchClients = async () => {
-    if (!user) return;
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError || !userData?.user) {
+      setError("User not authenticated.");
+      return;
+    }
 
     const { data, error } = await supabase
       .from("clients")
       .select("id, name")
-      .eq("user_id", user.id);
+      .eq("user_id", userData.user.id);
 
     if (error) {
       console.error("Error fetching clients:", error.message);
@@ -108,61 +113,56 @@ export default function PortfolioList() {
   };
 
   const handleShareIndividualOnWhatsApp = (item: PortfolioItem) => {
-    const shareUrl = `${window.location.origin}/portfolio-view/${item.public_share_id}`;
+    const shareUrl = `${window.location.origin}/portfolio/${item.public_share_id}`;
     const message = `Confira este item do meu portfólio: ${item.title} - ${shareUrl}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, "_blank");
   };
 
   const handleShareAllOnWhatsApp = () => {
-    const shareUrl = `${window.location.origin}/public-portfolio`;
+    const shareUrl = `${window.location.origin}/portfolio`;
     const message = `Confira meu portfólio completo: ${shareUrl}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, "_blank");
   };
 
   const handleEditClick = (item: PortfolioItem) => {
-    setSelectedPortfolioItem(item);
-    setIsEditDialogOpen(true);
+    setEditingItem(item);
+    setForm({
+      title: item.title,
+      description: item.description || "",
+      client_id: item.client_id || "",
+      client_reference_contact: item.client_reference_contact || "",
+    });
+    setIsDialogOpen(true);
   };
 
-  const handleDeleteItem = async (itemId: string) => {
-    setLoading(true);
-    try {
-      // 1. Delete associated images from storage and database
-      const { data: imagesData, error: fetchImagesError } = await supabase
-        .from("portfolio_images")
-        .select("id, image_url")
-        .eq("portfolio_item_id", itemId);
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { id, value } = e.target;
+    setForm(prev => ({ ...prev, [id]: value }));
+  };
 
-      if (fetchImagesError) {
-        console.warn("Erro ao buscar imagens para exclusão:", fetchImagesError.message);
-      } else if (imagesData && imagesData.length > 0) {
-        const filePaths = imagesData.map(img => img.image_url.split('portfolio_images/')[1]).filter(Boolean);
-        if (filePaths.length > 0) {
-          const { error: deleteStorageError } = await supabase.storage.from("portfolio_images").remove(filePaths);
-          if (deleteStorageError) {
-            console.warn("Erro ao excluir imagens do storage:", deleteStorageError.message);
-          }
-        }
-        const { error: deleteDbImagesError } = await supabase.from("portfolio_images").delete().eq("portfolio_item_id", itemId);
-        if (deleteDbImagesError) {
-          console.warn("Erro ao excluir imagens do banco de dados:", deleteDbImagesError.message);
-        }
-      }
+  const handleSave = async () => {
+    if (!editingItem) return;
 
-      // 2. Delete the portfolio item itself
-      const { error } = await supabase.from("portfolio_items").delete().eq("id", itemId);
-      if (error) {
-        throw error;
-      }
-      toast.success("Item do portfólio excluído com sucesso!");
+    const { error } = await supabase
+      .from("portfolio_items")
+      .update({
+        title: form.title,
+        description: form.description,
+        client_id: form.client_id || null,
+        client_reference_contact: form.client_reference_contact || null,
+      })
+      .eq("id", editingItem.id);
+
+    if (error) {
+      toast.error("Erro ao atualizar item do portfólio.");
+      console.error("Error updating portfolio item:", error.message);
+    } else {
+      toast.success("Item do portfólio atualizado com sucesso!");
+      setIsDialogOpen(false);
+      setEditingItem(null);
       fetchPortfolioItems(); // Refresh the list
-    } catch (error: any) {
-      toast.error("Erro ao excluir item do portfólio: " + error.message);
-      console.error("Erro ao excluir item do portfólio:", error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -179,11 +179,11 @@ export default function PortfolioList() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Meus Portfólios</h1>
         <div className="flex space-x-2">
-          <Button onClick={() => navigate("/portfolio")}>
+          <Button onClick={() => navigate("/portfolio/new")}>
             <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Novo Portfólio
           </Button>
           <Button variant="outline" onClick={handleShareAllOnWhatsApp} title="Compartilhar Portfólio Completo no WhatsApp">
-            <Share2 className="mr-2 h-4 w-4" /> Compartilhar Tudo
+            <Whatsapp className="mr-2 h-4 w-4" /> Compartilhar Tudo
           </Button>
         </div>
       </div>
@@ -196,46 +196,27 @@ export default function PortfolioList() {
             <Card key={item.id} className="flex flex-col">
               <CardHeader>
                 <CardTitle>{item.title}</CardTitle>
-                <CardDescription>Cliente: {item.clients?.name || "N/A"}</CardDescription>
+                <CardDescription>Cliente: {item.client_name}</CardDescription>
               </CardHeader>
               <CardContent className="flex-grow">
                 <p className="text-sm text-gray-600 line-clamp-3">{item.description}</p>
-                {item.portfolio_images && item.portfolio_images.length > 0 && (
+                {item.images && item.images.length > 0 && (
                   <div className="mt-4">
-                    <img src={item.portfolio_images[0].image_url} alt={item.portfolio_images[0].description || item.title} className="w-full h-48 object-cover rounded-md" />
+                    <img src={item.images[0].image_url} alt={item.images[0].description || item.title} className="w-full h-48 object-cover rounded-md" />
                   </div>
                 )}
               </CardContent>
               <CardFooter className="flex justify-between items-center mt-4">
-                <Link to={`/portfolio-view/${item.public_share_id}`} className="text-blue-600 hover:underline text-sm">
+                <Link to={`/portfolio/${item.id}`} className="text-blue-600 hover:underline text-sm">
                   Ver Detalhes
                 </Link>
                 <div className="flex space-x-2">
                   <Button variant="outline" size="sm" onClick={() => handleShareIndividualOnWhatsApp(item)} title="Compartilhar no WhatsApp">
-                    <Share2 className="h-4 w-4" />
+                    <Whatsapp className="h-4 w-4" />
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => handleEditClick(item)} title="Editar Item">
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="destructive" size="sm" title="Excluir Item">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Confirmar Exclusão</DialogTitle>
-                        <DialogDescription>
-                          Tem certeza que deseja excluir o item "{item.title}" do portfólio? Esta ação é irreversível e removerá todas as imagens associadas.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <DialogFooter>
-                        <Button variant="outline" onClick={() => {}}>Cancelar</Button>
-                        <Button variant="destructive" onClick={() => handleDeleteItem(item.id)}>Excluir</Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
                 </div>
               </CardFooter>
             </Card>
@@ -243,15 +224,56 @@ export default function PortfolioList() {
         </div>
       )}
 
-      {selectedPortfolioItem && (
-        <EditPortfolioItemDialog
-          isOpen={isEditDialogOpen}
-          onClose={() => setIsEditDialogOpen(false)}
-          portfolioItem={selectedPortfolioItem}
-          onSaveSuccess={fetchPortfolioItems}
-          clients={clients}
-        />
-      )}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{editingItem ? "Editar Item do Portfólio" : "Adicionar Novo Portfólio"}</DialogTitle>
+            <DialogDescription>
+              {editingItem ? "Faça alterações no seu item de portfólio aqui." : "Preencha os detalhes para um novo item de portfólio."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="title" className="text-right">
+                Título
+              </Label>
+              <Input id="title" value={form.title} onChange={handleFormChange} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="description" className="text-right">
+                Descrição
+              </Label>
+              <Textarea id="description" value={form.description} onChange={handleFormChange} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="client_id" className="text-right">
+                Cliente
+              </Label>
+              <Select onValueChange={(value) => handleFormChange({ target: { id: "client_id", value } } as React.ChangeEvent<HTMLSelectElement>)} value={form.client_id}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Selecione um cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="client_reference_contact" className="text-right">
+                Contato de Referência
+              </Label>
+              <Input id="client_reference_contact" value={form.client_reference_contact} onChange={handleFormChange} className="col-span-3" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="submit" onClick={handleSave}>Salvar alterações</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

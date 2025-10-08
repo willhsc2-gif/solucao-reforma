@@ -10,7 +10,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from 'uuid';
 import { sanitizeFileName } from "@/utils/file";
-import { useSession } from "@/components/SessionContextProvider"; // Importar useSession
 
 interface Client {
   id: string;
@@ -56,7 +55,6 @@ const EditPortfolioItemDialog: React.FC<EditPortfolioItemDialogProps> = ({
   onSaveSuccess,
   clients,
 }) => {
-  const { user } = useSession(); // Obter o usuário da sessão
   const [editedTitle, setEditedTitle] = useState("");
   const [editedDescription, setEditedDescription] = useState("");
   const [selectedClient, setSelectedClient] = useState<string | undefined>(undefined);
@@ -177,10 +175,6 @@ const EditPortfolioItemDialog: React.FC<EditPortfolioItemDialogProps> = ({
 
   const handleSave = async () => {
     if (!portfolioItem) return;
-    if (!user) {
-      toast.error("Usuário não autenticado.");
-      return;
-    }
 
     setLoading(true);
     try {
@@ -200,7 +194,6 @@ const EditPortfolioItemDialog: React.FC<EditPortfolioItemDialogProps> = ({
           title: editedTitle,
           description: editedDescription,
           client_id: selectedClient,
-          user_id: user.id, // Garantir que o user_id está associado
         })
         .eq("id", portfolioItem.id);
 
@@ -339,8 +332,7 @@ const EditPortfolioItemDialog: React.FC<EditPortfolioItemDialogProps> = ({
           {/* Gerenciamento de Imagens */}
           <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center"
                onDragOver={handleDragOver}
-               onDrop={handleDrop}
-               onDragLeave={(e) => e.preventDefault()}>
+               onDrop={handleDrop}>
             <UploadCloud className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600 mb-3" />
             <p className="text-gray-600 dark:text-gray-400 mb-2">Arraste e solte novas fotos aqui ou clique no botão abaixo.</p>
             <input
