@@ -77,8 +77,8 @@ const Budgets = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
-      <header className="bg-black text-white p-4 flex flex-col sm:flex-row items-center justify-between shadow-md">
-        <div className="flex items-center mb-4 sm:mb-0">
+      <header className="bg-black text-white p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between shadow-md">
+        <div className="flex items-center justify-center sm:justify-start mb-4 sm:mb-0">
           {companySettings.logo_url ? (
             <img src={companySettings.logo_url} alt="Logo" className="h-12 mr-4 rounded-md object-contain" />
           ) : (
@@ -86,8 +86,10 @@ const Budgets = () => {
               <span className="text-sm">Logo</span>
             </div>
           )}
+          <h1 className="text-xl font-bold hidden sm:block">{companySettings.company_name || "Sua Empresa"}</h1>
         </div>
         <div className="text-sm text-center sm:text-right">
+          <p className="font-bold sm:hidden">{companySettings.company_name || "Sua Empresa"}</p>
           <p>Telefone: {companySettings.phone || "(XX) XXXX-XXXX"}</p>
           <p>E-mail: {companySettings.email || "contato@suaempresa.com"}</p>
           <p>CNPJ: {companySettings.cnpj || "XX.XXX.XXX/XXXX-XX"}</p>
@@ -95,7 +97,7 @@ const Budgets = () => {
         </div>
       </header>
 
-      <main className="container mx-auto p-6">
+      <main className="container mx-auto p-4 sm:p-6">
         <h1 className="text-3xl font-bold mb-8 text-black dark:text-white">Criar Orçamento</h1>
 
         <form className="grid grid-cols-1 md:grid-cols-2 gap-6">
