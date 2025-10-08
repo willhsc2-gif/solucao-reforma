@@ -15,6 +15,11 @@
       "dest": "/index.html"
     },
     {
+      "src": "/workers/pdf.worker.min.js",
+      "headers": { "Content-Type": "application/javascript", "Cache-Control": "public, max-age=31536000, immutable" },
+      "dest": "/workers/pdf.worker.min.js"
+    },
+    {
       "src": "/assets/pdf.worker.min-([a-zA-Z0-9]+)\\.js",
       "headers": { "Content-Type": "application/javascript", "Cache-Control": "public, max-age=31536000, immutable" },
       "dest": "/assets/pdf.worker.min-$1.js"
