@@ -20,12 +20,9 @@ import PdfViewerDialog from "@/components/PdfViewerDialog";
 
 // Import the worker for pdfjs-dist
 import * as pdfjs from 'pdfjs-dist';
-// Importa o worker diretamente como uma URL para que o Vite o empacote corretamente.
-// Usando o caminho completo para o worker dentro de node_modules
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'; // Alterado para .mjs e ?url
-
 // Configura o worker do pdf.js para carregar o script localmente
-pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+// Usar new URL() para garantir que o Vite trate o worker como um asset e forneça o caminho correto.
+pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.js', import.meta.url).toString();
 
 const Budgets = () => {
   const {
@@ -50,7 +47,6 @@ const Budgets = () => {
 
   const pdfContentRef = React.useRef<HTMLDivElement>(null);
   const [showPdfViewer, setShowPdfViewer] = React.useState(false);
-  const [materialPdfPageImages, setMaterialPdfPageImages] = React.useState<string[]>([]); // Novo estado
 
   const formatCurrency = (value: string | number) => {
     const num = parseFloat(String(value));
@@ -71,8 +67,7 @@ const Budgets = () => {
     materialBudgetPdfFileName,
     pdfContentRef,
     formatCurrency,
-    resetForm,
-    setMaterialPdfPageImages // Passar o setter do novo estado
+    resetForm
   );
 
   const handleGeneratePdfClick = async () => {
@@ -253,7 +248,6 @@ const Budgets = () => {
         companySettings={companySettings}
         materialBudgetPdfFile={materialBudgetPdfFile}
         materialBudgetPdfFileName={materialBudgetPdfFileName}
-        materialPdfPageImages={materialPdfPageImages} // Passar o novo estado
         formatCurrency={formatCurrency}
         pdfContentRef={pdfContentRef}
       />

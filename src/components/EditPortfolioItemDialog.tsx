@@ -194,7 +194,6 @@ const EditPortfolioItemDialog: React.FC<EditPortfolioItemDialogProps> = ({
           title: editedTitle,
           description: editedDescription,
           client_id: selectedClient,
-          // user_id: null, // Remover user_id
         })
         .eq("id", portfolioItem.id);
 

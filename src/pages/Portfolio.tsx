@@ -147,7 +147,7 @@ const Portfolio = () => {
             client_id: selectedClient,
             title: portfolioTitle,
             description: portfolioDescription,
-            // user_id: null, // Remover user_id
+            user_id: null, // Definir como null já que não há usuário logado
           },
         ])
         .select()
@@ -249,7 +249,7 @@ const Portfolio = () => {
             email: clientForm.email,
             address: clientForm.address,
             city_zip: clientForm.city_zip,
-            // user_id: null, // Remover user_id
+            user_id: null, // Definir como null já que não há usuário logado
           },
         ]).select().single();
 

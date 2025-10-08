@@ -12,6 +12,18 @@ export default defineConfig(() => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // O alias para 'pdfjs-dist/build/pdf.worker.min.js' foi removido.
+      // O Vite agora resolverá o caminho diretamente do node_modules com o sufixo ?url.
     },
   },
+  // As configurações de optimizeDeps e build.rollupOptions foram comentadas anteriormente
+  // para permitir que o Vite bundle o pdfjs-dist. Vamos mantê-las assim.
+  // optimizeDeps: {
+  //   exclude: ['pdfjs-dist'], 
+  // },
+  // build: {
+  //   rollupOptions: {
+  //     external: ['pdfjs-dist'], 
+  //   },
+  // },
 }));

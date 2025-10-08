@@ -42,8 +42,7 @@ export const usePdfGeneration = (
   materialBudgetPdfFileName: string | null,
   pdfContentRef: React.RefObject<HTMLDivElement>,
   formatCurrency: (value: string | number) => string,
-  resetForm: () => void, // Callback to reset the form after successful save
-  setMaterialPdfPageImages: React.Dispatch<React.SetStateAction<string[]>> // Novo prop para atualizar as imagens
+  resetForm: () => void // Callback to reset the form after successful save
 ): UsePdfGenerationResult => {
   const [loadingPdf, setLoadingPdf] = useState(false);
   const [currentPdfUrl, setCurrentPdfUrl] = useState<string | null>(null);
@@ -65,87 +64,89 @@ export const usePdfGeneration = (
       throw new Error("Erro: Conteúdo do PDF não encontrado.");
     }
 
+    // Temporarily remove the material-pdf-section content for html2canvas,
+    // as we will add PDF pages directly later.
+    const materialPdfSection = pdfContentRef.current.querySelector('#material-pdf-section');
+    let originalMaterialPdfSectionContent = '';
+    if (materialPdfSection) {
+      originalMaterialPdfSectionContent = materialPdfSection.innerHTML;
+      materialPdfSection.innerHTML = materialBudgetPdfFile ? '<h3 class="text-xl font-semibold mb-2">Anexo de Materiais</h3>' : '';
+    }
+
     const canvas = await html2canvas(pdfContentRef.current, {
-      scale: 2, // Aumentar a escala para melhor qualidade
+      scale: 2,
       useCORS: true,
-      logging: false, // Desativar logs do html2canvas
     });
-    const imgData = canvas.toDataURL('image/jpeg', 0.9); // Usar JPEG para menor tamanho de arquivo
+    const imgData = canvas.toDataURL('image/png');
+
+    // Restore original content if needed (though it's hidden, good practice)
+    if (materialPdfSection) {
+      materialPdfSection.innerHTML = originalMaterialPdfSectionContent;
+    }
 
     const pdf = new jsPDF('p', 'mm', 'a4');
-    const imgWidth = 210; // Largura A4 em mm
-    const pageHeight = 297; // Altura A4 em mm
+    const imgWidth = 210;
+    const pageHeight = 297;
     const imgHeight = canvas.height * imgWidth / canvas.width;
     let heightLeft = imgHeight;
     let position = 0;
 
-    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
     heightLeft -= pageHeight;
 
     while (heightLeft >= 0) {
       position = heightLeft - imgHeight;
       pdf.addPage();
-      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
     }
 
-    return pdf; // Retorna a instância jsPDF
-  }, [pdfContentRef]);
+    return pdf; // Return the jsPDF instance
+  }, [pdfContentRef, materialBudgetPdfFile]);
 
   const handleSaveAndGeneratePdf = useCallback(async () => {
     setLoadingPdf(true);
     setCurrentPdfUrl(null);
-    let uploadedMaterialPdfUrl: string | null = null;
-    let materialPdfImages: string[] = [];
-
     try {
-      // 1. Upload material budget PDF if exists
+      let uploadedMaterialPdfUrl: string | null = null;
       if (materialBudgetPdfFile && materialBudgetPdfFileName) {
         const materialPdfPath = `material_budgets/${formData.budgetNumber}-${Date.now()}-${materialBudgetPdfFileName}`;
         uploadedMaterialPdfUrl = await uploadFile(materialBudgetPdfFile, "material_budget_pdfs", materialPdfPath);
+      }
 
-        // 2. Pre-process material budget PDF into images
+      const pdf = await generateMainPdfContent(); // Get the jsPDF instance with main content
+
+      if (materialBudgetPdfFile) {
+        // Load and embed material budget PDF pages
         const materialPdfData = await materialBudgetPdfFile.arrayBuffer();
         const loadingTask = pdfjs.getDocument({ data: materialPdfData });
         const materialPdfDoc = await loadingTask.promise;
 
         for (let i = 1; i <= materialPdfDoc.numPages; i++) {
           const page = await materialPdfDoc.getPage(i);
-          const viewport = page.getViewport({ scale: 1.5 }); // Ajuste a escala conforme necessário
+          const viewport = page.getViewport({ scale: 1.5 }); // Adjust scale as needed
           const canvas = document.createElement('canvas');
           const context = canvas.getContext('2d');
+          canvas.height = viewport.height;
+          canvas.width = viewport.width; // Ensure width is also set for proper rendering
 
-          if (context) {
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
+          await page.render({ canvasContext: context, viewport: viewport }).promise;
 
-            const renderContext = {
-              canvasContext: context,
-              viewport: viewport,
-            };
-            await page.render(renderContext).promise;
-            materialPdfImages.push(canvas.toDataURL('image/jpeg', 0.8)); // Usar JPEG para menor tamanho
-          }
+          const imgData = canvas.toDataURL('image/jpeg', 0.9); // Use JPEG for smaller size
+          const imgWidth = 210; // A4 width in mm
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+          pdf.addPage(); // Add a new page for each material PDF page
+          pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
         }
       }
 
-      // 3. Update state to render material PDF images in BudgetPdfContent
-      setMaterialPdfPageImages(materialPdfImages);
-
-      // Give React a moment to render the images into the DOM
-      await new Promise(resolve => setTimeout(resolve, 50));
-
-      // 4. Generate the main PDF content (which now includes material PDF images)
-      const pdf = await generateMainPdfContent();
-
-      // 5. Convert the final jsPDF instance to a Blob and upload
       const finalPdfBlob = pdf.output('blob');
       const finalPdfFile = new File([finalPdfBlob], `orcamento-${formData.budgetNumber}.pdf`, { type: 'application/pdf' });
 
       const pdfPath = `budgets/${formData.budgetNumber}-${Date.now()}.pdf`;
       const uploadedPdfUrl = await uploadFile(finalPdfFile, "budget_pdfs", pdfPath);
 
-      // 6. Insert budget data into Supabase
       const { error } = await supabase.from("budgets").insert([
         {
           client_id: null,
@@ -163,7 +164,6 @@ export const usePdfGeneration = (
           logo_url: companySettings.logo_url,
           material_budget_pdf_url: uploadedMaterialPdfUrl,
           material_budget_pdf_name: materialBudgetPdfFileName,
-          // user_id: null, // Remover user_id
         },
       ]);
 
@@ -180,7 +180,6 @@ export const usePdfGeneration = (
       console.error("Erro ao salvar orçamento:", error);
       setCurrentPdfUrl(null);
     } finally {
-      setMaterialPdfPageImages([]); // Clean up images from hidden content
       setLoadingPdf(false);
     }
   }, [
@@ -193,7 +192,6 @@ export const usePdfGeneration = (
     uploadFile,
     generateMainPdfContent,
     resetForm,
-    setMaterialPdfPageImages,
   ]);
 
   return {

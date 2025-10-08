@@ -44,13 +44,6 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const requestUrl = new URL(event.request.url);
 
-  // Explicitamente ignorar requisições de 'chrome-extension' e outros esquemas não HTTP/HTTPS
-  // Esta verificação deve ser a primeira coisa a acontecer no manipulador de fetch.
-  if (requestUrl.protocol === 'chrome-extension:' || !requestUrl.protocol.startsWith('http')) {
-    console.log('Service Worker: Ignoring non-HTTP/HTTPS or chrome-extension request:', event.request.url);
-    return; // Ignorar requisições que não são HTTP ou HTTPS (ex: chrome-extension)
-  }
-
   // Check if the request is for a static asset that should be cache-first
   if (staticUrlsToCache.includes(requestUrl.pathname)) {
     event.respondWith(
