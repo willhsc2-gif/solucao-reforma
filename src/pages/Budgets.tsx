@@ -20,12 +20,11 @@ import PdfViewerDialog from "@/components/PdfViewerDialog";
 
 // Import the worker for pdfjs-dist
 import * as pdfjs from 'pdfjs-dist';
-// Import the worker directly as a URL asset
-import PdfWorker from 'pdfjs-dist/build/pdf.worker.min.js?url';
-
-// Configura o worker do pdf.js para carregar o script localmente
-// Usar `PdfWorker` diretamente, que já é a URL do asset.
-pdfjs.GlobalWorkerOptions.workerSrc = PdfWorker;
+// Import the worker directly and get its URL using new URL()
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.js',
+  import.meta.url,
+).toString();
 
 const Budgets = () => {
   const {
