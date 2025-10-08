@@ -12,16 +12,14 @@ export default defineConfig(() => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      // O alias para 'pdfjs-dist/build/pdf.worker.min.js' foi removido.
-      // O Vite agora resolverá o caminho diretamente do node_modules com o sufixo ?url.
     },
   },
   optimizeDeps: {
-    exclude: ['pdfjs-dist'], 
+    // exclude: ['pdfjs-dist'], // Removido para permitir que o Vite processe o worker
   },
   build: {
     rollupOptions: {
-      external: ['pdfjs-dist'], 
+      // external: ['pdfjs-dist'], // Removido para permitir que o Vite processe o worker
     },
   },
 }));
