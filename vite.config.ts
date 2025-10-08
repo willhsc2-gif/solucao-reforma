@@ -16,14 +16,12 @@ export default defineConfig(() => ({
       // O Vite agora resolverá o caminho diretamente do node_modules com o sufixo ?url.
     },
   },
-  // As configurações de optimizeDeps e build.rollupOptions foram comentadas anteriormente
-  // para permitir que o Vite bundle o pdfjs-dist. Vamos mantê-las assim.
-  // optimizeDeps: {
-  //   exclude: ['pdfjs-dist'], 
-  // },
-  // build: {
-  //   rollupOptions: {
-  //     external: ['pdfjs-dist'], 
-  //   },
-  // },
+  optimizeDeps: {
+    exclude: ['pdfjs-dist'], 
+  },
+  build: {
+    rollupOptions: {
+      external: ['pdfjs-dist'], 
+    },
+  },
 }));
