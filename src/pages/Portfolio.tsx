@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Share2, Link as LinkIcon, UserPlus, Image as ImageIcon, XCircle, Users, Trash2, Pencil, MessageSquareText } from "lucide-react"; // Adicionado MessageSquareText
+import { UserPlus, Image as ImageIcon, XCircle, Users, Trash2, Pencil, MessageSquareText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from 'uuid';
@@ -20,7 +20,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Importando Tabs
 import { sanitizeFileName } from "@/utils/file"; // Importar a função de sanitização
+import PortfolioList from "./PortfolioList"; // Importar o novo componente PortfolioList
 
 interface Client {
   id: string;
@@ -44,7 +46,8 @@ const Portfolio = () => {
   const [portfolioDescription, setPortfolioDescription] = React.useState("");
   const [imageFilesWithPreviews, setImageFilesWithPreviews] = React.useState<ImageFileWithPreview[]>([]);
   const [loading, setLoading] = React.useState(false);
-  const [publicShareLink, setPublicShareLink] = React.useState<string | null>(null);
+  // publicShareLink não é mais necessário aqui, pois o compartilhamento será por item na lista.
+  // const [publicShareLink, setPublicShareLink] = React.useState<string | null>(null);
 
   // State for client form dialog (add/edit)
   const [isClientFormDialogOpen, setIsClientFormDialogOpen] = React.useState(false);
@@ -155,7 +158,7 @@ const Portfolio = () => {
       }
 
       const portfolioItemId = portfolioItemData.id;
-      const publicShareId = portfolioItemData.public_share_id;
+      // const publicShareId = portfolioItemData.public_share_id; // Não é mais necessário aqui
 
       // 2. Upload images and insert into portfolio_images
       for (const [index, imageFile] of imageFilesWithPreviews.entries()) {
@@ -174,8 +177,8 @@ const Portfolio = () => {
         }
       }
 
-      const generatedLink = `${window.location.origin}/portfolio-view/${publicShareId}`;
-      setPublicShareLink(generatedLink);
+      // const generatedLink = `${window.location.origin}/portfolio-view/${publicShareId}`; // Não é mais necessário aqui
+      // setPublicShareLink(generatedLink); // Não é mais necessário aqui
       toast.success("Item de portfólio salvo com sucesso!");
 
       // Reset form fields for a new entry
@@ -192,24 +195,9 @@ const Portfolio = () => {
     }
   };
 
-  const handleCopyLink = () => {
-    if (publicShareLink) {
-      navigator.clipboard.writeText(publicShareLink);
-      toast.success("Link copiado para a área de transferência!");
-    } else {
-      toast.error("Nenhum link para copiar. Salve o item de portfólio primeiro.");
-    }
-  };
-
-  const handleShareOnWhatsApp = () => {
-    if (publicShareLink && portfolioTitle) {
-      const message = `Confira meu novo serviço realizado: ${portfolioTitle} - ${publicShareLink}`;
-      window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
-      toast.success("Abrindo WhatsApp para compartilhar!");
-    } else {
-      toast.error("Nenhum link ou título de portfólio disponível para compartilhar. Salve o item primeiro.");
-    }
-  };
+  // handleCopyLink e handleShareOnWhatsApp serão movidos para PortfolioList.tsx
+  // const handleCopyLink = () => { ... };
+  // const handleShareOnWhatsApp = () => { ... };
 
   const handleClientFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
@@ -337,19 +325,8 @@ const Portfolio = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 p-4 sm:p-6">
       <div className="container mx-auto max-w-4xl">
-        {/* Top Buttons */}
+        {/* Top Buttons (Gerenciar Clientes e Novo Contato) */}
         <div className="flex flex-col sm:flex-row sm:justify-end space-y-2 sm:space-y-0 sm:space-x-2 mb-8">
-          {publicShareLink && ( // Only show share buttons if a link exists
-            <>
-              <Button onClick={handleCopyLink} variant="outline" className="bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700">
-                <LinkIcon className="mr-2 h-4 w-4" /> Copiar Link
-              </Button>
-              <Button onClick={handleShareOnWhatsApp} variant="outline" className="bg-green-500 text-white hover:bg-green-600">
-                <MessageSquareText className="mr-2 h-4 w-4" /> Compartilhar no WhatsApp
-              </Button>
-            </>
-          )}
-
           <Button variant="outline" onClick={openAddClientDialog}>
             <UserPlus className="mr-2 h-4 w-4" /> Novo Contato
           </Button>
@@ -449,87 +426,97 @@ const Portfolio = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Main Title and Description */}
+        {/* Main Title and Tabs */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-black dark:text-white">Serviços Realizados</h1>
-          <p className="text-xl text-gray-700 dark:text-gray-300">Portfólio de Obras</p>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">Adicione fotos e vincule contatos de clientes como referência.</p>
+          <h1 className="text-3xl font-bold text-black dark:text-white">Gerenciar Portfólio</h1>
+          <p className="text-xl text-gray-700 dark:text-gray-300">Serviços Realizados</p>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 mb-8">
-          <div>
-            <Label htmlFor="portfolio-title">Título da Foto</Label>
-            <Input id="portfolio-title" placeholder="Ex: Reforma de cozinha" value={portfolioTitle} onChange={(e) => setPortfolioTitle(e.target.value)} />
-          </div>
-          <div>
-            <Label htmlFor="portfolio-description">Descrição do Serviço</Label>
-            <Textarea id="portfolio-description" placeholder="Detalhes sobre o serviço realizado..." rows={3} value={portfolioDescription} onChange={(e) => setPortfolioDescription(e.target.value)} />
-          </div>
-          <div>
-            <Label htmlFor="client-link">Vincular a um Cliente (opcional)</Label>
-            <Select onValueChange={setSelectedClient} value={selectedClient}>
-              <SelectTrigger id="client-link">
-                <SelectValue placeholder="Selecione um cliente" />
-              </SelectTrigger>
-              <SelectContent>
-                {clients.map((client) => (
-                  <SelectItem key={client.id} value={client.id}>
-                    {client.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Upload de Fotos do Serviço Section */}
-        <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center mb-8"
-             onDragOver={handleDragOver}
-             onDrop={handleDrop}>
-          <ImageIcon className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600 mb-3" />
-          <p className="text-gray-600 dark:text-gray-400 mb-2">Arraste e solte suas fotos aqui ou clique no botão abaixo.</p>
-          <input
-            type="file"
-            id="image-upload"
-            className="hidden"
-            accept="image/*"
-            multiple
-            onChange={handleImageUpload}
-          />
-          <Label htmlFor="image-upload" className="cursor-pointer inline-flex items-center justify-center px-6 py-3 bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700 rounded-lg shadow-md transition-all duration-300 font-medium">
-            Adicionar Fotos
-          </Label>
-          {imageFilesWithPreviews.length > 0 && (
-            <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {imageFilesWithPreviews.map((file) => (
-                <div key={file.id} className="relative group">
-                  <img src={file.preview} alt={file.name} className="w-full h-32 object-cover rounded-md shadow-sm" />
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => handleRemoveImage(file.id)}
-                  >
-                    <XCircle className="h-4 w-4" />
-                  </Button>
-                  <Input
-                    placeholder="Descrição da foto"
-                    className="mt-1 text-sm"
-                    value={file.description}
-                    onChange={(e) => handleImageDescriptionChange(file.id, e.target.value)}
-                  />
-                </div>
-              ))}
+        <Tabs defaultValue="create" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="create">Criar Novo Serviço</TabsTrigger>
+            <TabsTrigger value="list">Meus Portfólios</TabsTrigger>
+          </TabsList>
+          <TabsContent value="create" className="mt-6">
+            <div className="grid grid-cols-1 gap-6 mb-8">
+              <div>
+                <Label htmlFor="portfolio-title">Título da Foto</Label>
+                <Input id="portfolio-title" placeholder="Ex: Reforma de cozinha" value={portfolioTitle} onChange={(e) => setPortfolioTitle(e.target.value)} />
+              </div>
+              <div>
+                <Label htmlFor="portfolio-description">Descrição do Serviço</Label>
+                <Textarea id="portfolio-description" placeholder="Detalhes sobre o serviço realizado..." rows={3} value={portfolioDescription} onChange={(e) => setPortfolioDescription(e.target.value)} />
+              </div>
+              <div>
+                <Label htmlFor="client-link">Vincular a um Cliente (opcional)</Label>
+                <Select onValueChange={setSelectedClient} value={selectedClient}>
+                  <SelectTrigger id="client-link">
+                    <SelectValue placeholder="Selecione um cliente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          )}
-        </div>
 
-        {/* Save Button */}
-        <div className="flex justify-end mt-8">
-          <Button onClick={handleSavePortfolioItem} className="px-8 py-4 text-lg bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700 rounded-lg shadow-lg transition-all duration-300" disabled={loading}>
-            {loading ? "Salvando..." : "Salvar Serviço"}
-          </Button>
-        </div>
+            {/* Upload de Fotos do Serviço Section */}
+            <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center mb-8"
+                 onDragOver={handleDragOver}
+                 onDrop={handleDrop}>
+              <ImageIcon className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600 mb-3" />
+              <p className="text-gray-600 dark:text-gray-400 mb-2">Arraste e solte suas fotos aqui ou clique no botão abaixo.</p>
+              <input
+                type="file"
+                id="image-upload"
+                className="hidden"
+                accept="image/*"
+                multiple
+                onChange={handleImageUpload}
+              />
+              <Label htmlFor="image-upload" className="cursor-pointer inline-flex items-center justify-center px-6 py-3 bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700 rounded-lg shadow-md transition-all duration-300 font-medium">
+                Adicionar Fotos
+              </Label>
+              {imageFilesWithPreviews.length > 0 && (
+                <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {imageFilesWithPreviews.map((file) => (
+                    <div key={file.id} className="relative group">
+                      <img src={file.preview} alt={file.name} className="w-full h-32 object-cover rounded-md shadow-sm" />
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => handleRemoveImage(file.id)}
+                      >
+                        <XCircle className="h-4 w-4" />
+                      </Button>
+                      <Input
+                        placeholder="Descrição da foto"
+                        className="mt-1 text-sm"
+                        value={file.description}
+                        onChange={(e) => handleImageDescriptionChange(file.id, e.target.value)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Save Button */}
+            <div className="flex justify-end mt-8">
+              <Button onClick={handleSavePortfolioItem} className="px-8 py-4 text-lg bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700 rounded-lg shadow-lg transition-all duration-300" disabled={loading}>
+                {loading ? "Salvando..." : "Salvar Serviço"}
+              </Button>
+            </div>
+          </TabsContent>
+          <TabsContent value="list" className="mt-6">
+            <PortfolioList />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
