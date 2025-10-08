@@ -20,9 +20,11 @@ import PdfViewerDialog from "@/components/PdfViewerDialog";
 
 // Import the worker for pdfjs-dist
 import * as pdfjs from 'pdfjs-dist';
+// Importa o worker diretamente como uma URL para que o Vite o empacote corretamente.
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.js?url';
+
 // Configura o worker do pdf.js para carregar o script localmente
-// O arquivo pdf.worker.min.js será tratado pelo Vite e empacotado.
-pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.js', import.meta.url).toString();
+pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 const Budgets = () => {
   const {
