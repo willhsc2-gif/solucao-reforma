@@ -66,7 +66,7 @@ const PublicPortfolioView = () => {
       // Mapear os dados para garantir a tipagem correta de 'clients'
       const typedItemData: PortfolioItem = {
         ...itemData,
-        clients: itemData.clients as { name: string } | null,
+        clients: itemData.clients ? { name: itemData.clients.name } : null, // Ensure clients is { name: string } or null
       };
       setPortfolioItem(typedItemData);
 

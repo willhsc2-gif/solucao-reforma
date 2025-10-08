@@ -50,7 +50,7 @@ const PublicPortfolioList = () => {
       // Mapear os dados para garantir a tipagem correta de 'clients'
       const typedData: PortfolioItem[] = data.map(item => ({
         ...item,
-        clients: item.clients as { name: string } | null,
+        clients: item.clients ? { name: item.clients.name } : null, // Ensure clients is { name: string } or null
         portfolio_images: item.portfolio_images as { image_url: string }[],
       }));
       setPortfolioItems(typedData);
