@@ -63,7 +63,12 @@ const PublicPortfolioView = () => {
         setLoading(false);
         return;
       }
-      setPortfolioItem(itemData);
+      // Mapear os dados para garantir a tipagem correta de 'clients'
+      const typedItemData: PortfolioItem = {
+        ...itemData,
+        clients: itemData.clients as { name: string } | null,
+      };
+      setPortfolioItem(typedItemData);
 
       // Fetch images for the portfolio item
       const { data: imageData, error: imageError } = await supabase

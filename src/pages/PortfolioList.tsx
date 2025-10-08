@@ -77,7 +77,13 @@ const PortfolioList = () => {
       if (error) {
         throw error;
       }
-      setPortfolioItems(data as PortfolioItem[]);
+      // Mapear os dados para garantir a tipagem correta de 'clients'
+      const typedData: PortfolioItem[] = data.map(item => ({
+        ...item,
+        clients: item.clients as { name: string } | null,
+        portfolio_images: item.portfolio_images as { image_url: string }[],
+      }));
+      setPortfolioItems(typedData);
     } catch (err: any) {
       console.error("Erro ao carregar itens do portfólio:", err);
       setError("Erro ao carregar itens do portfólio: " + err.message);

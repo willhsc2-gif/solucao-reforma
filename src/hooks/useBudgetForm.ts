@@ -31,16 +31,14 @@ interface UseBudgetFormResult {
   toggleDescriptionListening: () => void;
   isNotesListening: boolean;
   toggleNotesListening: () => void;
-  browserSupportsSpeechRecognition: boolean;
+  browserSupportsSpeechRecognition: boolean; // Adicionado aqui
+  clearTranscript: () => void;
   resetForm: () => void;
 }
 
 const generateBudgetNumber = () => {
   return `ORC-${uuidv4().substring(0, 8).toUpperCase()}`;
 };
-
-// A função sanitizeFileName foi movida para src/utils/file.ts e importada.
-// A versão local foi removida para evitar duplicação e garantir consistência.
 
 export const useBudgetForm = (): UseBudgetFormResult => {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -200,6 +198,7 @@ export const useBudgetForm = (): UseBudgetFormResult => {
     isNotesListening,
     toggleNotesListening: handleToggleNotesListening,
     browserSupportsSpeechRecognition,
+    clearTranscript: clearDescriptionTranscript, // Adicionado clearTranscript aqui
     resetForm,
   };
 };
