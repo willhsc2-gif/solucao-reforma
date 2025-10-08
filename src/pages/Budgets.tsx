@@ -21,7 +21,8 @@ import PdfViewerDialog from "@/components/PdfViewerDialog";
 // Import the worker for pdfjs-dist
 import * as pdfjs from 'pdfjs-dist';
 // Importa o worker diretamente como uma URL para que o Vite o empacote corretamente.
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.js?url';
+// Usando o caminho completo para o worker dentro de node_modules
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'; // Alterado para .mjs e ?url
 
 // Configura o worker do pdf.js para carregar o script localmente
 pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
