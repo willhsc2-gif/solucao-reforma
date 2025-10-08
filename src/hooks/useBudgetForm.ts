@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import useSpeechToText from "@/hooks/use-speech-to-text";
 import { toast } from 'sonner';
+import { sanitizeFileName } from "@/utils/file"; // Importar a função de sanitização
 
 interface BudgetFormData {
   budgetNumber: string;
@@ -38,14 +39,8 @@ const generateBudgetNumber = () => {
   return `ORC-${uuidv4().substring(0, 8).toUpperCase()}`;
 };
 
-const sanitizeFileName = (fileName: string) => {
-  let sanitized = fileName.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  sanitized = sanitized.replace(/\s+/g, "-");
-  sanitized = sanitized.replace(/[^a-zA-Z0-9-._]/g, "");
-  sanitized = sanitized.replace(/--+/g, "-");
-  sanitized = sanitized.replace(/^-+|-+$/g, "");
-  return sanitized;
-};
+// A função sanitizeFileName foi movida para src/utils/file.ts e importada.
+// A versão local foi removida para evitar duplicação e garantir consistência.
 
 export const useBudgetForm = (): UseBudgetFormResult => {
   const [date, setDate] = useState<Date | undefined>(new Date());
