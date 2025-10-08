@@ -94,17 +94,7 @@ const PortfolioList = () => {
     window.open(`/portfolio-view/${publicShareId}`, '_blank');
   };
 
-  const handleCopyLink = (publicShareId: string) => {
-    if (!publicShareId) {
-      toast.error("ID de compartilhamento público não disponível para este item.");
-      return;
-    }
-    const link = `${window.location.origin}/portfolio-view/${publicShareId}`;
-    navigator.clipboard.writeText(link);
-    toast.success("Link copiado para a área de transferência!");
-  };
-
-  const handleShareOnWhatsApp = (portfolioItem: PortfolioItem) => {
+  const handleShareIndividualOnWhatsApp = (portfolioItem: PortfolioItem) => {
     if (!portfolioItem.public_share_id) {
       toast.error("ID de compartilhamento público não disponível para este item.");
       return;
@@ -113,6 +103,13 @@ const PortfolioList = () => {
     const message = `Confira meu novo serviço realizado: ${portfolioItem.title} - ${link}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
     toast.success("Abrindo WhatsApp para compartilhar!");
+  };
+
+  const handleShareAllPortfoliosOnWhatsApp = () => {
+    const link = `${window.location.origin}/public-portfolio`;
+    const message = `Confira nosso portfólio completo de serviços realizados: ${link}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+    toast.success("Abrindo WhatsApp para compartilhar o portfólio completo!");
   };
 
   const handleDeletePortfolioItem = async (id: string) => {
@@ -188,12 +185,21 @@ const PortfolioList = () => {
       <div className="text-center p-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
         <p className="text-xl text-gray-700 dark:text-gray-300">Nenhum item de portfólio encontrado.</p>
         <p className="text-md text-gray-500 dark:text-gray-400 mt-2">Crie seu primeiro serviço realizado na aba "Criar Novo Serviço".</p>
+        <Button onClick={handleShareAllPortfoliosOnWhatsApp} className="mt-4 bg-green-500 hover:bg-green-600 text-white">
+          <Share2 className="mr-2 h-4 w-4" /> Compartilhar Portfólio Vazio
+        </Button>
       </div>
     );
   }
 
   return (
     <>
+      <div className="flex justify-end mb-6">
+        <Button onClick={handleShareAllPortfoliosOnWhatsApp} className="bg-green-500 hover:bg-green-600 text-white">
+          <Share2 className="mr-2 h-4 w-4" /> Compartilhar Todo o Portfólio
+        </Button>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {portfolioItems.map((item) => (
           <Card key={item.id} className="flex flex-col">
@@ -225,10 +231,7 @@ const PortfolioList = () => {
               <Button variant="outline" size="sm" onClick={() => handleViewPortfolio(item.public_share_id)} title="Visualizar Portfólio">
                 <Eye className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="sm" onClick={() => handleCopyLink(item.public_share_id)} title="Copiar Link Público">
-                <LinkIcon className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => handleShareOnWhatsApp(item)} title="Compartilhar no WhatsApp">
+              <Button variant="outline" size="sm" onClick={() => handleShareIndividualOnWhatsApp(item)} title="Compartilhar no WhatsApp">
                 <MessageSquareText className="h-4 w-4" />
               </Button>
               <Button variant="outline" size="sm" onClick={() => handleEditClick(item)} title="Editar Item">
