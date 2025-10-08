@@ -217,7 +217,7 @@ const PortfolioList = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {portfolioItems.map((item) => (
-          <Card key={item.id} className="flex flex-col"> {/* Card principal */}
+          <Card key={item.id} className="flex flex-col">
             <CardHeader>
               <div className="relative w-full h-48 bg-gray-200 dark:bg-gray-700 rounded-t-lg overflow-hidden">
                 {item.portfolio_images.length > 0 ? (
@@ -233,7 +233,7 @@ const PortfolioList = () => {
                 )}
               </div>
               <CardTitle className="mt-4">{item.title}</CardTitle>
-              {item.clients?.[0]?.name && ( {/* Corrigido: Acessa o primeiro elemento do array */}
+              {item.clients?.[0]?.name && ( // Acessa o primeiro elemento do array
                 <CardDescription className="text-sm text-gray-600 dark:text-gray-400">
                   Cliente: {item.clients[0].name}
                 </CardDescription>

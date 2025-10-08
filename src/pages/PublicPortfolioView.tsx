@@ -138,7 +138,7 @@ const PublicPortfolioView = () => {
             <p className="text-md font-semibold text-gray-800 dark:text-gray-200">
               Contato de Referência: {portfolioItem.client_reference_contact}
             </p>
-            {portfolioItem.clients?.[0]?.name && ( {/* Corrigido: Acessa o primeiro elemento do array */}
+            {portfolioItem.clients?.[0]?.name && ( // Acessa o primeiro elemento do array
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 (Cliente: {portfolioItem.clients[0].name})
               </p>

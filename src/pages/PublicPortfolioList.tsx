@@ -50,7 +50,7 @@ const PublicPortfolioList = () => {
       // Mapear os dados para garantir a tipagem correta de 'clients'
       const typedData: PortfolioItem[] = data.map(item => ({
         ...item,
-        clients: item.clients ? (item.clients as { name: string }[]) : null, // Corrigido: cast para array ou null
+        clients: item.clients as { name: string }[] | null, // Corrigido: cast para array ou null
         portfolio_images: item.portfolio_images as { image_url: string }[],
       }));
       setPortfolioItems(typedData);
@@ -125,7 +125,7 @@ const PublicPortfolioList = () => {
                   )}
                 </div>
                 <CardTitle className="mt-4">{item.title}</CardTitle>
-                {item.clients?.[0]?.name && ( {/* Corrigido: Acessa o primeiro elemento do array */}
+                {item.clients?.[0]?.name && ( // Acessa o primeiro elemento do array
                   <CardDescription className="text-sm text-gray-600 dark:text-gray-400">
                     Cliente: {item.clients[0].name}
                   </CardDescription>
