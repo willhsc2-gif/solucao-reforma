@@ -5,7 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { PlusCircle, Edit, Whatsapp } from "lucide-react"; // Removido MessageSquareText
+import { PlusCircle, Edit, Share2 } from "lucide-react"; 
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -183,7 +183,7 @@ export default function PortfolioList() {
             <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Novo Portfólio
           </Button>
           <Button variant="outline" onClick={handleShareAllOnWhatsApp} title="Compartilhar Portfólio Completo no WhatsApp">
-            <Whatsapp className="mr-2 h-4 w-4" /> Compartilhar Tudo
+            <Share2 className="mr-2 h-4 w-4" /> Compartilhar Tudo
           </Button>
         </div>
       </div>
@@ -212,7 +212,7 @@ export default function PortfolioList() {
                 </Link>
                 <div className="flex space-x-2">
                   <Button variant="outline" size="sm" onClick={() => handleShareIndividualOnWhatsApp(item)} title="Compartilhar no WhatsApp">
-                    <Whatsapp className="h-4 w-4" />
+                    <Share2 className="h-4 w-4" />
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => handleEditClick(item)} title="Editar Item">
                     <Edit className="h-4 w-4" />
