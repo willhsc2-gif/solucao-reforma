@@ -24,6 +24,9 @@ import * as pdfjs from 'pdfjs-dist';
 // Usar new URL() para garantir que o Vite trate o worker como um asset e forneça o caminho correto.
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.js', import.meta.url).toString();
 
+// Adicionado para depuração: Verifique o caminho do worker do PDF.js
+console.log("PDF.js Worker URL:", pdfjs.GlobalWorkerOptions.workerSrc);
+
 const Budgets = () => {
   const {
     formData,

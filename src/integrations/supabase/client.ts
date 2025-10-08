@@ -9,8 +9,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
   // Fallback or throw an error to prevent app from crashing
   // For now, we'll use placeholder values to allow the app to load, but operations will fail.
-  // In a real app, you might want to display an error message to the user.
   // For this exercise, we'll proceed with the assumption that the user will set them up.
 }
+
+// Adicionado para depuração: Verifique se as chaves estão sendo carregadas
+console.log("Supabase URL (loaded):", supabaseUrl ? "Loaded" : "Missing");
+console.log("Supabase Anon Key (loaded):", supabaseAnonKey ? "Loaded" : "Missing");
+
 
 export const supabase = createClient(supabaseUrl || 'YOUR_SUPABASE_URL', supabaseAnonKey || 'YOUR_SUPABASE_ANON_KEY');
