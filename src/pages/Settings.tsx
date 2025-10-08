@@ -8,10 +8,11 @@ import { Save, UploadCloud, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from 'uuid';
-import { sanitizeFileName } from "@/utils/file"; // Importar a função de sanitização
+import { sanitizeFileName } from "@/utils/file";
+import { useCompanySettings } from "@/hooks/useCompanySettings"; // Import the updated hook
 
 interface CompanySettings {
-  id: string;
+  id: string; // Now this is the user_id
   company_name: string;
   phone: string;
   email: string;
@@ -20,51 +21,28 @@ interface CompanySettings {
   logo_url: string;
 }
 
-const SETTINGS_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'; // Fixed ID for the single company settings entry
+// SETTINGS_ID is no longer needed as the ID will be the user's ID
+// const SETTINGS_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
 
 const Settings = () => {
-  const [settings, setSettings] = React.useState<Partial<CompanySettings>>({});
+  const { companySettings, loadingCompanySettings, errorCompanySettings, fetchCompanySettings, userId } = useCompanySettings();
+  const [localSettings, setLocalSettings] = React.useState<Partial<CompanySettings>>({});
   const [logoFile, setLogoFile] = React.useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = React.useState<string | null>(null);
-  const [loading, setLoading] = React.useState(false);
+  const [saving, setSaving] = React.useState(false); // Renamed from 'loading' to avoid confusion with loadingCompanySettings
 
   React.useEffect(() => {
-    fetchCompanySettings();
-  }, []);
-
-  const fetchCompanySettings = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("company_settings")
-        .select("*")
-        .eq("id", SETTINGS_ID)
-        .single();
-
-      if (error && error.code !== 'PGRST116') { // PGRST116 means "no rows found"
-        throw error;
+    if (companySettings) {
+      setLocalSettings(companySettings);
+      if (companySettings.logo_url) {
+        setLogoPreviewUrl(companySettings.logo_url);
       }
-
-      if (data) {
-        setSettings(data);
-        if (data.logo_url) {
-          setLogoPreviewUrl(data.logo_url);
-        }
-      } else {
-        // If no settings found, initialize with empty values
-        setSettings({ id: SETTINGS_ID, company_name: "", phone: "", email: "", cnpj: "", address: "", logo_url: "" });
-      }
-    } catch (error: any) {
-      toast.error("Erro ao carregar configurações da empresa: " + error.message);
-      console.error("Erro ao carregar configurações da empresa:", error);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [companySettings]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
-    setSettings((prev) => ({ ...prev, [id]: value }));
+    setLocalSettings((prev) => ({ ...prev, [id]: value }));
   };
 
   const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,7 +56,7 @@ const Settings = () => {
   const uploadFile = async (file: File, bucket: string, path: string) => {
     const { data, error } = await supabase.storage.from(bucket).upload(path, file, {
       cacheControl: "3600",
-      upsert: true, // Upsert to overwrite if file with same path exists
+      upsert: true,
     });
     if (error) {
       throw error;
@@ -88,14 +66,18 @@ const Settings = () => {
   };
 
   const handleSaveSettings = async () => {
-    setLoading(true);
+    if (!userId) {
+      toast.error("Você precisa estar logado para salvar as configurações da empresa.");
+      return;
+    }
+
+    setSaving(true);
     try {
-      let newLogoUrl = settings.logo_url;
+      let newLogoUrl = localSettings.logo_url;
 
       if (logoFile) {
-        // Upload new logo
-        const sanitizedLogoFileName = sanitizeFileName(logoFile.name); // Sanitize the filename
-        const filePath = `${SETTINGS_ID}/${uuidv4()}-${sanitizedLogoFileName}`;
+        const sanitizedLogoFileName = sanitizeFileName(logoFile.name);
+        const filePath = `${userId}/${uuidv4()}-${sanitizedLogoFileName}`; // Use userId for path
         newLogoUrl = await uploadFile(logoFile, "logos", filePath);
       }
 
@@ -103,12 +85,12 @@ const Settings = () => {
         .from("company_settings")
         .upsert(
           {
-            id: SETTINGS_ID,
-            company_name: settings.company_name || "",
-            phone: settings.phone || "",
-            email: settings.email || "",
-            cnpj: settings.cnpj || "",
-            address: settings.address || "",
+            id: userId, // Use userId as the ID for upsert
+            company_name: localSettings.company_name || "",
+            phone: localSettings.phone || "",
+            email: localSettings.email || "",
+            cnpj: localSettings.cnpj || "",
+            address: localSettings.address || "",
             logo_url: newLogoUrl || "",
             updated_at: new Date().toISOString(),
           },
@@ -121,17 +103,34 @@ const Settings = () => {
         throw error;
       }
 
-      setSettings(data);
+      setLocalSettings(data);
       setLogoPreviewUrl(data.logo_url);
-      setLogoFile(null); // Clear file input after successful upload
+      setLogoFile(null);
       toast.success("Configurações da empresa salvas com sucesso!");
     } catch (error: any) {
       toast.error("Erro ao salvar configurações da empresa: " + error.message);
       console.error("Erro ao salvar configurações da empresa:", error);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
+
+  if (loadingCompanySettings) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 p-4 sm:p-6">
+        <p>Carregando configurações da empresa...</p>
+      </div>
+    );
+  }
+
+  if (errorCompanySettings) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 p-4 sm:p-6">
+        <p className="text-red-500">{errorCompanySettings}</p>
+        {/* Optionally add a login/signup button here if the error is due to unauthenticated user */}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 p-4 sm:p-6">
@@ -147,7 +146,7 @@ const Settings = () => {
               <Label htmlFor="company_name">Nome da Empresa</Label>
               <Input
                 id="company_name"
-                value={settings.company_name || ""}
+                value={localSettings.company_name || ""}
                 onChange={handleInputChange}
                 placeholder="Nome da sua empresa"
               />
@@ -156,7 +155,7 @@ const Settings = () => {
               <Label htmlFor="phone">Telefone</Label>
               <Input
                 id="phone"
-                value={settings.phone || ""}
+                value={localSettings.phone || ""}
                 onChange={handleInputChange}
                 placeholder="(XX) XXXX-XXXX"
               />
@@ -166,7 +165,7 @@ const Settings = () => {
               <Input
                 id="email"
                 type="email"
-                value={settings.email || ""}
+                value={localSettings.email || ""}
                 onChange={handleInputChange}
                 placeholder="contato@suaempresa.com"
               />
@@ -175,7 +174,7 @@ const Settings = () => {
               <Label htmlFor="cnpj">CNPJ</Label>
               <Input
                 id="cnpj"
-                value={settings.cnpj || ""}
+                value={localSettings.cnpj || ""}
                 onChange={handleInputChange}
                 placeholder="XX.XXX.XXX/XXXX-XX"
               />
@@ -184,7 +183,7 @@ const Settings = () => {
               <Label htmlFor="address">Endereço</Label>
               <Textarea
                 id="address"
-                value={settings.address || ""}
+                value={localSettings.address || ""}
                 onChange={handleInputChange}
                 placeholder="Rua, Número, Bairro, Cidade - Estado, CEP"
                 rows={3}
@@ -213,8 +212,8 @@ const Settings = () => {
               </div>
             </div>
             <div className="flex justify-end">
-              <Button onClick={handleSaveSettings} disabled={loading} className="px-6 py-3 text-lg bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700">
-                {loading ? "Salvando..." : <><Save className="mr-2 h-5 w-5" /> Salvar Configurações</>}
+              <Button onClick={handleSaveSettings} disabled={saving || !userId} className="px-6 py-3 text-lg bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700">
+                {saving ? "Salvando..." : <><Save className="mr-2 h-5 w-5" /> Salvar Configurações</>}
               </Button>
             </div>
           </CardContent>
