@@ -6,34 +6,27 @@
       "VITE_SUPABASE_ANON_KEY": "@vite_supabase_anon_key"
     }
   },
+  "cleanUrls": false,
+  "trailingSlash": false,
   "routes": [
     {
-      "src": "/assets/(.*\\.js)",
-      "headers": { "Content-Type": "application/javascript" },
-      "dest": "/assets/$1"
-    },
-    {
-      "src": "/assets/(.*\\.css)",
-      "headers": { "Content-Type": "text/css" },
-      "dest": "/assets/$1"
-    },
-    {
       "src": "/assets/(.*)",
+      "headers": { "Cache-Control": "public, max-age=31536000, immutable" },
       "dest": "/assets/$1"
     },
     {
-      "src": "/icons/(.*\\.png)",
-      "headers": { "Content-Type": "image/png" },
+      "src": "/icons/(.*)",
+      "headers": { "Cache-Control": "public, max-age=31536000, immutable" },
       "dest": "/icons/$1"
     },
     {
       "src": "/manifest.json",
-      "headers": { "Content-Type": "application/manifest+json" },
+      "headers": { "Content-Type": "application/manifest+json", "Cache-Control": "public, max-age=0, must-revalidate" },
       "dest": "/manifest.json"
     },
     {
       "src": "/service-worker.js",
-      "headers": { "Content-Type": "application/javascript" },
+      "headers": { "Content-Type": "application/javascript", "Cache-Control": "public, max-age=0, must-revalidate" },
       "dest": "/service-worker.js"
     },
     {
