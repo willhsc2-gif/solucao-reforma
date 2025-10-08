@@ -22,7 +22,7 @@ interface PortfolioItem {
   description: string;
   public_share_id: string;
   client_id?: string;
-  clients?: { name: string };
+  clients?: { name: string }[] | null; // Corrected: clients can be an array or null
   created_at: string;
 }
 
