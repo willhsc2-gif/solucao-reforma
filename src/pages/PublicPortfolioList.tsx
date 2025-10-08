@@ -22,6 +22,7 @@ const PublicPortfolioList = () => {
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
+    console.log("PublicPortfolioList component mounted."); // Debugging line
     fetchPublicPortfolioItems();
   }, []);
 

@@ -42,6 +42,7 @@ const PortfolioList = () => {
   const [clients, setClients] = React.useState<Client[]>([]); // Para passar para o diálogo de edição
 
   React.useEffect(() => {
+    console.log("PortfolioList component mounted."); // Debugging line
     fetchPortfolioItems();
     fetchClients();
   }, []);
@@ -101,14 +102,22 @@ const PortfolioList = () => {
     }
     const link = `${window.location.origin}/portfolio-view/${portfolioItem.public_share_id}`;
     const message = `Confira meu novo serviço realizado: ${portfolioItem.title} - ${link}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`; // Added whatsappUrl variable for clarity
+
+    console.log("Generated individual WhatsApp URL:", whatsappUrl); // Debugging line
+
+    window.open(whatsappUrl, '_blank');
     toast.success("Abrindo WhatsApp para compartilhar!");
   };
 
   const handleShareAllPortfoliosOnWhatsApp = () => {
     const link = `${window.location.origin}/public-portfolio`;
     const message = `Confira nosso portfólio completo de serviços realizados: ${link}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`; // Added whatsappUrl variable for clarity
+
+    console.log("Generated all portfolios WhatsApp URL:", whatsappUrl); // Debugging line
+
+    window.open(whatsappUrl, '_blank');
     toast.success("Abrindo WhatsApp para compartilhar o portfólio completo!");
   };
 
