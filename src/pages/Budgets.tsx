@@ -20,8 +20,8 @@ import PdfViewerDialog from "@/components/PdfViewerDialog";
 
 // Import the worker for pdfjs-dist
 import * as pdfjs from 'pdfjs-dist';
-// Import the worker directly as a URL asset using the new alias
-import PdfWorker from 'pdfjs-worker?url';
+// Import the worker directly as a URL asset
+import PdfWorker from 'pdfjs-dist/build/pdf.worker.min.js?url';
 
 // Configura o worker do pdf.js para carregar o script localmente
 // Usar `PdfWorker` diretamente, que já é a URL do asset.
