@@ -1,38 +1,31 @@
-"use client";
-
-import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { PlusCircle, Edit, MessageSquareText, Share2, Whatsapp } from "lucide-react"; // Adicionado Whatsapp
-import { toast } from "react-hot-toast";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Eye, Share2, Link as LinkIcon, Trash2, MessageSquareText, Pencil, Image as ImageIcon } from "lucide-react";
+import EditPortfolioItemDialog from "@/components/EditPortfolioItemDialog"; // Importar o novo componente de edição
 
 interface PortfolioItem {
   id: string;
-  user_id: string;
-  client_id: string | null;
   title: string;
-  description: string | null;
+  description: string;
   public_share_id: string;
-  client_reference_contact: string | null;
+  client_id?: string;
+  clients?: { name: string };
   created_at: string;
-  client_name?: string;
-  images?: PortfolioImage[];
-}
-
-interface PortfolioImage {
-  id: string;
-  portfolio_item_id: string;
-  image_url: string;
-  description: string | null;
-  order_index: number;
-  created_at: string;
+  portfolio_images: { image_url: string }[];
 }
 
 interface Client {
@@ -40,240 +33,256 @@ interface Client {
   name: string;
 }
 
-export default function PortfolioList() {
-  const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<PortfolioItem | null>(null);
-  const [form, setForm] = useState({
-    title: "",
-    description: "",
-    client_id: "",
-    client_reference_contact: "",
-  });
-  const navigate = useNavigate();
+const PortfolioList = () => {
+  const [portfolioItems, setPortfolioItems] = React.useState<PortfolioItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
+  const [currentEditingItem, setCurrentEditingItem] = React.useState<PortfolioItem | null>(null);
+  const [clients, setClients] = React.useState<Client[]>([]); // Para passar para o diálogo de edição
 
-  useEffect(() => {
+  React.useEffect(() => {
+    console.log("PortfolioList component mounted."); // Debugging line
     fetchPortfolioItems();
     fetchClients();
   }, []);
 
+  const fetchClients = async () => {
+    const { data, error } = await supabase.from("clients").select("id, name");
+    if (error) {
+      console.error("Erro ao carregar clientes:", error);
+    } else {
+      setClients(data || []);
+    }
+  };
+
   const fetchPortfolioItems = async () => {
     setLoading(true);
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    if (userError || !userData?.user) {
-      setError("User not authenticated.");
+    setError(null);
+    try {
+      const { data, error } = await supabase
+        .from("portfolio_items")
+        .select(`
+          id,
+          title,
+          description,
+          public_share_id,
+          client_id,
+          created_at,
+          clients (name),
+          portfolio_images (image_url)
+        `)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+      setPortfolioItems(data as PortfolioItem[]);
+    } catch (err: any) {
+      console.error("Erro ao carregar itens do portfólio:", err);
+      setError("Erro ao carregar itens do portfólio: " + err.message);
+      toast.error("Erro ao carregar portfólio: " + err.message);
+    } finally {
       setLoading(false);
+    }
+  };
+
+  const handleViewPortfolio = (publicShareId: string) => {
+    if (!publicShareId) {
+      toast.error("ID de compartilhamento público não disponível para este item.");
       return;
     }
-
-    const { data, error } = await supabase
-      .from("portfolio_items")
-      .select(`
-        *,
-        clients (name),
-        portfolio_images (id, image_url, description, order_index)
-      `)
-      .eq("user_id", userData.user.id);
-
-    if (error) {
-      setError(error.message);
-      toast.error("Erro ao carregar itens do portfólio.");
-    } else {
-      const itemsWithClientNames = data.map(item => ({
-        ...item,
-        client_name: item.clients?.name || "N/A",
-        images: item.portfolio_images || [],
-      }));
-      setPortfolioItems(itemsWithClientNames as PortfolioItem[]);
-    }
-    setLoading(false);
+    window.open(`/portfolio-view/${publicShareId}`, '_blank');
   };
 
-  const fetchClients = async () => {
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    if (userError || !userData?.user) {
-      setError("User not authenticated.");
+  const handleShareIndividualOnWhatsApp = (portfolioItem: PortfolioItem) => {
+    if (!portfolioItem.public_share_id) {
+      toast.error("ID de compartilhamento público não disponível para este item.");
       return;
     }
+    const link = `${window.location.origin}/portfolio-view/${portfolioItem.public_share_id}`;
+    const message = `Confira meu novo serviço realizado: ${portfolioItem.title} - ${link}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`; // Added whatsappUrl variable for clarity
 
-    const { data, error } = await supabase
-      .from("clients")
-      .select("id, name")
-      .eq("user_id", userData.user.id);
+    console.log("Generated individual WhatsApp URL:", whatsappUrl); // Debugging line
 
-    if (error) {
-      console.error("Error fetching clients:", error.message);
-      toast.error("Erro ao carregar clientes.");
-    } else {
-      setClients(data as Client[]);
+    window.open(whatsappUrl, '_blank');
+    toast.success("Abrindo WhatsApp para compartilhar!");
+  };
+
+  const handleShareAllPortfoliosOnWhatsApp = () => {
+    const link = `${window.location.origin}/public-portfolio`;
+    const message = `Confira nosso portfólio completo de serviços realizados: ${link}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`; // Added whatsappUrl variable for clarity
+
+    console.log("Generated all portfolios WhatsApp URL:", whatsappUrl); // Debugging line
+
+    window.open(whatsappUrl, '_blank');
+    toast.success("Abrindo WhatsApp para compartilhar o portfólio completo!");
+  };
+
+  const handleDeletePortfolioItem = async (id: string) => {
+    setLoading(true);
+    try {
+      // Fetch images associated with the portfolio item to delete from storage
+      const { data: imagesData, error: fetchImagesError } = await supabase
+        .from("portfolio_images")
+        .select("image_url")
+        .eq("portfolio_item_id", id);
+
+      if (fetchImagesError) {
+        console.warn("Could not fetch images for deletion from storage:", fetchImagesError.message);
+        // Continue with deletion from DB even if storage deletion fails
+      } else if (imagesData && imagesData.length > 0) {
+        const filePaths = imagesData.map(img => img.image_url.split('portfolio_images/')[1]).filter(Boolean);
+        if (filePaths.length > 0) {
+          const { error: deleteStorageError } = await supabase.storage.from("portfolio_images").remove(filePaths as string[]);
+          if (deleteStorageError) {
+            console.warn("Could not delete images from storage:", deleteStorageError.message);
+          }
+        }
+      }
+
+      const { error } = await supabase.from("portfolio_items").delete().eq("id", id);
+      if (error) {
+        throw error;
+      }
+      toast.success("Item de portfólio excluído com sucesso!");
+      fetchPortfolioItems(); // Refresh the list
+    } catch (err: any) {
+      toast.error("Erro ao excluir item de portfólio: " + err.message);
+      console.error("Erro ao excluir item de portfólio:", err);
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const handleShareIndividualOnWhatsApp = (item: PortfolioItem) => {
-    const shareUrl = `${window.location.origin}/portfolio/${item.public_share_id}`;
-    const message = `Confira este item do meu portfólio: ${item.title} - ${shareUrl}`;
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, "_blank");
-  };
-
-  const handleShareAllOnWhatsApp = () => {
-    const shareUrl = `${window.location.origin}/portfolio`;
-    const message = `Confira meu portfólio completo: ${shareUrl}`;
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, "_blank");
   };
 
   const handleEditClick = (item: PortfolioItem) => {
-    setEditingItem(item);
-    setForm({
-      title: item.title,
-      description: item.description || "",
-      client_id: item.client_id || "",
-      client_reference_contact: item.client_reference_contact || "",
-    });
-    setIsDialogOpen(true);
+    setCurrentEditingItem(item);
+    setIsEditDialogOpen(true);
   };
 
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { id, value } = e.target;
-    setForm(prev => ({ ...prev, [id]: value }));
+  const handleEditDialogClose = () => {
+    setIsEditDialogOpen(false);
+    setCurrentEditingItem(null);
   };
 
-  const handleSave = async () => {
-    if (!editingItem) return;
-
-    const { error } = await supabase
-      .from("portfolio_items")
-      .update({
-        title: form.title,
-        description: form.description,
-        client_id: form.client_id || null,
-        client_reference_contact: form.client_reference_contact || null,
-      })
-      .eq("id", editingItem.id);
-
-    if (error) {
-      toast.error("Erro ao atualizar item do portfólio.");
-      console.error("Error updating portfolio item:", error.message);
-    } else {
-      toast.success("Item do portfólio atualizado com sucesso!");
-      setIsDialogOpen(false);
-      setEditingItem(null);
-      fetchPortfolioItems(); // Refresh the list
-    }
+  const handleSaveSuccess = () => {
+    fetchPortfolioItems(); // Refresh the list after successful save
   };
 
   if (loading) {
-    return <div className="text-center py-8">Carregando portfólios...</div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-lg text-gray-700 dark:text-gray-300">Carregando portfólio...</p>
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="text-center py-8 text-red-500">Erro: {error}</div>;
+    return (
+      <div className="text-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+        <h1 className="text-2xl font-bold text-red-600 mb-4">Erro</h1>
+        <p className="text-lg text-gray-700 dark:text-gray-300">{error}</p>
+        <Button onClick={fetchPortfolioItems} className="mt-4">Tentar Novamente</Button>
+      </div>
+    );
+  }
+
+  if (portfolioItems.length === 0) {
+    return (
+      <div className="text-center p-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+        <p className="text-xl text-gray-700 dark:text-gray-300">Nenhum item de portfólio encontrado.</p>
+        <p className="text-md text-gray-500 dark:text-gray-400 mt-2">Crie seu primeiro serviço realizado na aba "Criar Novo Serviço".</p>
+        <Button onClick={handleShareAllPortfoliosOnWhatsApp} className="mt-4 bg-green-500 hover:bg-green-600 text-white">
+          <Share2 className="mr-2 h-4 w-4" /> Compartilhar Portfólio Vazio
+        </Button>
+      </div>
+    );
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Meus Portfólios</h1>
-        <div className="flex space-x-2">
-          <Button onClick={() => navigate("/portfolio/new")}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Novo Portfólio
-          </Button>
-          <Button variant="outline" onClick={handleShareAllOnWhatsApp} title="Compartilhar Portfólio Completo no WhatsApp">
-            <Whatsapp className="mr-2 h-4 w-4" /> Compartilhar Tudo
-          </Button>
-        </div>
+    <>
+      <div className="flex justify-end mb-6">
+        <Button onClick={handleShareAllPortfoliosOnWhatsApp} className="bg-green-500 hover:bg-green-600 text-white">
+          <Share2 className="mr-2 h-4 w-4" /> Compartilhar Todo o Portfólio
+        </Button>
       </div>
 
-      {portfolioItems.length === 0 ? (
-        <p className="text-center text-gray-500">Nenhum item de portfólio encontrado. Comece adicionando um!</p>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {portfolioItems.map((item) => (
-            <Card key={item.id} className="flex flex-col">
-              <CardHeader>
-                <CardTitle>{item.title}</CardTitle>
-                <CardDescription>Cliente: {item.client_name}</CardDescription>
-              </CardHeader>
-              <CardContent className="flex-grow">
-                <p className="text-sm text-gray-600 line-clamp-3">{item.description}</p>
-                {item.images && item.images.length > 0 && (
-                  <div className="mt-4">
-                    <img src={item.images[0].image_url} alt={item.images[0].description || item.title} className="w-full h-48 object-cover rounded-md" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {portfolioItems.map((item) => (
+          <Card key={item.id} className="flex flex-col">
+            <CardHeader>
+              <div className="relative w-full h-48 bg-gray-200 dark:bg-gray-700 rounded-t-lg overflow-hidden">
+                {item.portfolio_images.length > 0 ? (
+                  <img
+                    src={item.portfolio_images[0].image_url}
+                    alt={item.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center w-full h-full text-gray-500 dark:text-gray-400">
+                    <ImageIcon className="h-12 w-12" />
                   </div>
                 )}
-              </CardContent>
-              <CardFooter className="flex justify-between items-center mt-4">
-                <Link to={`/portfolio/${item.id}`} className="text-blue-600 hover:underline text-sm">
-                  Ver Detalhes
-                </Link>
-                <div className="flex space-x-2">
-                  <Button variant="outline" size="sm" onClick={() => handleShareIndividualOnWhatsApp(item)} title="Compartilhar no WhatsApp">
-                    <Whatsapp className="h-4 w-4" />
+              </div>
+              <CardTitle className="mt-4">{item.title}</CardTitle>
+              {item.clients?.name && (
+                <CardDescription className="text-sm text-gray-600 dark:text-gray-400">
+                  Cliente: {item.clients.name}
+                </CardDescription>
+              )}
+            </CardHeader>
+            <CardContent className="flex-grow">
+              <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-3">{item.description}</p>
+            </CardContent>
+            <CardFooter className="flex flex-wrap justify-end gap-2 pt-4">
+              <Button variant="outline" size="sm" onClick={() => handleViewPortfolio(item.public_share_id)} title="Visualizar Portfólio">
+                <Eye className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => handleShareIndividualOnWhatsApp(item)} title="Compartilhar no WhatsApp">
+                <MessageSquareText className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => handleEditClick(item)} title="Editar Item">
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm" title="Excluir Item">
+                    <Trash2 className="h-4 w-4" />
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleEditClick(item)} title="Editar Item">
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      )}
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta ação não pode ser desfeita. Isso excluirá permanentemente o item de portfólio "{item.title}".
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => handleDeletePortfolioItem(item.id)}>
+                      Excluir
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>{editingItem ? "Editar Item do Portfólio" : "Adicionar Novo Portfólio"}</DialogTitle>
-            <DialogDescription>
-              {editingItem ? "Faça alterações no seu item de portfólio aqui." : "Preencha os detalhes para um novo item de portfólio."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="title" className="text-right">
-                Título
-              </Label>
-              <Input id="title" value={form.title} onChange={handleFormChange} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="description" className="text-right">
-                Descrição
-              </Label>
-              <Textarea id="description" value={form.description} onChange={handleFormChange} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="client_id" className="text-right">
-                Cliente
-              </Label>
-              <Select onValueChange={(value) => handleFormChange({ target: { id: "client_id", value } } as React.ChangeEvent<HTMLSelectElement>)} value={form.client_id}>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Selecione um cliente" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="client_reference_contact" className="text-right">
-                Contato de Referência
-              </Label>
-              <Input id="client_reference_contact" value={form.client_reference_contact} onChange={handleFormChange} className="col-span-3" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="submit" onClick={handleSave}>Salvar alterações</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+      {currentEditingItem && (
+        <EditPortfolioItemDialog
+          isOpen={isEditDialogOpen}
+          onClose={handleEditDialogClose}
+          portfolioItem={currentEditingItem}
+          onSaveSuccess={handleSaveSuccess}
+          clients={clients}
+        />
+      )}
+    </>
   );
-}
+};
+
+export default PortfolioList;
