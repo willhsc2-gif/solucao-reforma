@@ -24,10 +24,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Trash2, CheckCircle, Clock, Eye, Share2, FileText } from "lucide-react";
 import { format } from "date-fns";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"; // Dialog is still used for client management, but not for PDF viewing here.
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useSession } from "@/components/SessionContextProvider"; // Importar useSession
 
 interface Budget {
   id: string;
+  user_id: string; // Adicionar user_id
   client_id?: string;
   client_name_text?: string;
   clients?: { name: string };
@@ -49,23 +51,37 @@ interface Budget {
 }
 
 const BudgetList = () => {
+  const { user, loading: loadingUser } = useSession(); // Obter o usuário e o estado de carregamento da sessão
   const [budgets, setBudgets] = React.useState<Budget[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    fetchBudgets();
-  }, []);
+    if (!loadingUser && user) { // Só tenta buscar orçamentos depois que o estado do usuário for carregado e houver um usuário
+      fetchBudgets();
+    } else if (!loadingUser && !user) {
+      setBudgets([]);
+      setLoading(false);
+      setError("Usuário não autenticado. Faça login para ver seus orçamentos.");
+    }
+  }, [user, loadingUser]);
 
   const fetchBudgets = async () => {
     setLoading(true);
     setError(null);
+    if (!user) {
+      setError("Usuário não autenticado.");
+      setLoading(false);
+      return;
+    }
+
     const { data, error } = await supabase
       .from("budgets")
       .select(`
         *,
         clients (name)
       `)
+      .eq("user_id", user.id) // Filtrar por user_id
       .order("created_at", { ascending: false });
 
     if (error) {

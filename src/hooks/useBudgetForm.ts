@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import useSpeechToText from "@/hooks/use-speech-to-text";
 import { toast } from 'sonner';
 import { sanitizeFileName } from "@/utils/file"; // Importar a função de sanitização
+import { useSession } from "@/components/SessionContextProvider"; // Importar useSession
 
 interface BudgetFormData {
   budgetNumber: string;
@@ -39,10 +40,8 @@ const generateBudgetNumber = () => {
   return `ORC-${uuidv4().substring(0, 8).toUpperCase()}`;
 };
 
-// A função sanitizeFileName foi movida para src/utils/file.ts e importada.
-// A versão local foi removida para evitar duplicação e garantir consistência.
-
 export const useBudgetForm = (): UseBudgetFormResult => {
+  const { user } = useSession(); // Obter o usuário da sessão
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [formData, setFormData] = useState<BudgetFormData>({
     budgetNumber: generateBudgetNumber(),

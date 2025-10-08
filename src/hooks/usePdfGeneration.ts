@@ -5,6 +5,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import * as pdfjs from 'pdfjs-dist';
 import { format } from 'date-fns';
+import { useSession } from "@/components/SessionContextProvider"; // Importar useSession
 
 interface BudgetFormData {
   budgetNumber: string;
@@ -20,6 +21,7 @@ interface BudgetFormData {
 
 interface CompanySettings {
   id: string;
+  user_id: string; // Adicionar user_id
   company_name: string;
   phone: string;
   email: string;
@@ -44,6 +46,7 @@ export const usePdfGeneration = (
   formatCurrency: (value: string | number) => string,
   resetForm: () => void // Callback to reset the form after successful save
 ): UsePdfGenerationResult => {
+  const { user } = useSession(); // Obter o usuário da sessão
   const [loadingPdf, setLoadingPdf] = useState(false);
   const [currentPdfUrl, setCurrentPdfUrl] = useState<string | null>(null);
 
@@ -108,6 +111,12 @@ export const usePdfGeneration = (
     setLoadingPdf(true);
     setCurrentPdfUrl(null);
     try {
+      if (!user) {
+        toast.error("Usuário não autenticado. Por favor, faça login para salvar orçamentos.");
+        setLoadingPdf(false);
+        return;
+      }
+
       let uploadedMaterialPdfUrl: string | null = null;
       if (materialBudgetPdfFile && materialBudgetPdfFileName) {
         const materialPdfPath = `material_budgets/${formData.budgetNumber}-${Date.now()}-${materialBudgetPdfFileName}`;
@@ -149,6 +158,7 @@ export const usePdfGeneration = (
 
       const { error } = await supabase.from("budgets").insert([
         {
+          user_id: user.id, // Associar ao user_id
           client_id: null,
           client_name_text: formData.clientName,
           budget_number: formData.budgetNumber,
@@ -192,6 +202,7 @@ export const usePdfGeneration = (
     uploadFile,
     generateMainPdfContent,
     resetForm,
+    user,
   ]);
 
   return {

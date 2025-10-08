@@ -23,6 +23,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Importando Tabs
 import { sanitizeFileName } from "@/utils/file"; // Importar a função de sanitização
 import PortfolioList from "./PortfolioList"; // Importar o novo componente PortfolioList
+import { useSession } from "@/components/SessionContextProvider"; // Importar useSession
 
 interface Client {
   id: string;
@@ -40,14 +41,13 @@ interface ImageFileWithPreview extends File {
 }
 
 const Portfolio = () => {
+  const { user } = useSession(); // Obter o usuário da sessão
   const [clients, setClients] = React.useState<Client[]>([]);
   const [selectedClient, setSelectedClient] = React.useState<string | undefined>(undefined);
   const [portfolioTitle, setPortfolioTitle] = React.useState("");
   const [portfolioDescription, setPortfolioDescription] = React.useState("");
   const [imageFilesWithPreviews, setImageFilesWithPreviews] = React.useState<ImageFileWithPreview[]>([]);
   const [loading, setLoading] = React.useState(false);
-  // publicShareLink não é mais necessário aqui, pois o compartilhamento será por item na lista.
-  // const [publicShareLink, setPublicShareLink] = React.useState<string | null>(null);
 
   // State for client form dialog (add/edit)
   const [isClientFormDialogOpen, setIsClientFormDialogOpen] = React.useState(false);
@@ -56,11 +56,14 @@ const Portfolio = () => {
   const [isManageClientsDialogOpen, setIsManageClientsDialogOpen] = React.useState(false);
 
   React.useEffect(() => {
-    fetchClients();
-  }, []);
+    if (user) {
+      fetchClients();
+    }
+  }, [user]);
 
   const fetchClients = async () => {
-    const { data, error } = await supabase.from("clients").select("id, name, phone, email, address, city_zip");
+    if (!user) return;
+    const { data, error } = await supabase.from("clients").select("id, name, phone, email, address, city_zip").eq("user_id", user.id);
     if (error) {
       toast.error("Erro ao carregar clientes: " + error.message);
     } else {
@@ -130,6 +133,10 @@ const Portfolio = () => {
   const handleSavePortfolioItem = async () => {
     setLoading(true);
     try {
+      if (!user) {
+        toast.error("Usuário não autenticado.");
+        return;
+      }
       if (!portfolioTitle) {
         toast.error("O título da foto é obrigatório.");
         return;
@@ -147,7 +154,7 @@ const Portfolio = () => {
             client_id: selectedClient,
             title: portfolioTitle,
             description: portfolioDescription,
-            user_id: null, // Definir como null já que não há usuário logado
+            user_id: user.id, // Associar ao user_id
           },
         ])
         .select()
@@ -158,7 +165,6 @@ const Portfolio = () => {
       }
 
       const portfolioItemId = portfolioItemData.id;
-      // const publicShareId = portfolioItemData.public_share_id; // Não é mais necessário aqui
 
       // 2. Upload images and insert into portfolio_images
       for (const [index, imageFile] of imageFilesWithPreviews.entries()) {
@@ -177,8 +183,6 @@ const Portfolio = () => {
         }
       }
 
-      // const generatedLink = `${window.location.origin}/portfolio-view/${publicShareId}`; // Não é mais necessário aqui
-      // setPublicShareLink(generatedLink); // Não é mais necessário aqui
       toast.success("Item de portfólio salvo com sucesso!");
 
       // Reset form fields for a new entry
@@ -194,10 +198,6 @@ const Portfolio = () => {
       setLoading(false);
     }
   };
-
-  // handleCopyLink e handleShareOnWhatsApp serão movidos para PortfolioList.tsx
-  // const handleCopyLink = () => { ... };
-  // const handleShareOnWhatsApp = () => { ... };
 
   const handleClientFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
@@ -236,6 +236,10 @@ const Portfolio = () => {
   const handleSaveClient = async () => {
     setLoading(true);
     try {
+      if (!user) {
+        toast.error("Usuário não autenticado.");
+        return;
+      }
       if (!clientForm.name) {
         toast.error("O nome do cliente é obrigatório.");
         return;
@@ -249,7 +253,7 @@ const Portfolio = () => {
             email: clientForm.email,
             address: clientForm.address,
             city_zip: clientForm.city_zip,
-            user_id: null, // Definir como null já que não há usuário logado
+            user_id: user.id, // Associar ao user_id
           },
         ]).select().single();
 
@@ -467,6 +471,7 @@ const Portfolio = () => {
             {/* Upload de Fotos do Serviço Section */}
             <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center mb-8"
                  onDragOver={handleDragOver}
+                 onDragLeave={(e) => e.preventDefault()}
                  onDrop={handleDrop}>
               <ImageIcon className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600 mb-3" />
               <p className="text-gray-600 dark:text-gray-400 mb-2">Arraste e solte suas fotos aqui ou clique no botão abaixo.</p>
