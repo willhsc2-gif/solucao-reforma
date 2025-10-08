@@ -11,9 +11,6 @@ import PublicPortfolioList from "./pages/PublicPortfolioList";
 import BudgetList from "./pages/BudgetList";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
-import Login from "./pages/Login"; // Importar a página de Login
-import { SessionContextProvider } from "./components/SessionContextProvider"; // Importar o provedor de sessão
-import ProtectedRoute from "./components/ProtectedRoute"; // Importar o ProtectedRoute
 
 const queryClient = new QueryClient();
 
@@ -23,52 +20,18 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <SessionContextProvider> {/* Envolve todo o aplicativo com o provedor de sessão */}
-          <Routes>
-            {/* Rotas Públicas */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/" element={<Home />} />
-            <Route path="/portfolio-view/:publicShareId" element={<PublicPortfolioView />} />
-            <Route path="/public-portfolio" element={<PublicPortfolioList />} />
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/budgets" element={<Budgets />} />
+          <Route path="/budget-list" element={<BudgetList />} />
+          <Route path="/portfolio" element={<Portfolio />} />
+          <Route path="/portfolio-view/:publicShareId" element={<PublicPortfolioView />} />
+          <Route path="/public-portfolio" element={<PublicPortfolioList />} />
+          <Route path="/settings" element={<Settings />} />
 
-            {/* Rotas Protegidas */}
-            <Route
-              path="/budgets"
-              element={
-                <ProtectedRoute>
-                  <Budgets />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/budget-list"
-              element={
-                <ProtectedRoute>
-                  <BudgetList />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/portfolio"
-              element={
-                <ProtectedRoute>
-                  <Portfolio />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute>
-                  <Settings />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* ADICIONE TODAS AS ROTAS PERSONALIZADAS ACIMA DA ROTA CORINGA "*" */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </SessionContextProvider>
+          {/* ADICIONE TODAS AS ROTAS PERSONALIZADAS ACIMA DA ROTA CORINGA "*" */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
