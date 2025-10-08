@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Share2, Link as LinkIcon, UserPlus, Image as ImageIcon, XCircle, Users, Trash2, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { v4 as uuidv4 } from 'uuid';
 import {
   AlertDialog,
@@ -20,6 +19,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { sanitizeFileName } from "@/utils/file"; // Importar a função de sanitização
 
 interface Client {
   id: string;
@@ -158,7 +158,8 @@ const Portfolio = () => {
 
       // 2. Upload images and insert into portfolio_images
       for (const [index, imageFile] of imageFilesWithPreviews.entries()) {
-        const imageUrl = await uploadFile(imageFile, "portfolio_images", `${portfolioItemId}/${Date.now()}-${imageFile.name}`);
+        const sanitizedImageFileName = sanitizeFileName(imageFile.name); // Sanitize the filename
+        const imageUrl = await uploadFile(imageFile, "portfolio_images", `${portfolioItemId}/${Date.now()}-${sanitizedImageFileName}`);
         const { error: imageError } = await supabase.from("portfolio_images").insert([
           {
             portfolio_item_id: portfolioItemId,
@@ -327,32 +328,9 @@ const Portfolio = () => {
       <div className="container mx-auto max-w-4xl">
         {/* Top Buttons */}
         <div className="flex flex-col sm:flex-row sm:justify-end space-y-2 sm:space-y-0 sm:space-x-2 mb-8">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button className="bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700">
-                <Share2 className="mr-2 h-4 w-4" /> Compartilhar
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Compartilhar Item de Portfólio</DialogTitle>
-              </DialogHeader>
-              {publicShareLink ? (
-                <div className="flex items-center space-x-2">
-                  <Input value={publicShareLink} readOnly className="flex-grow" />
-                  <Button onClick={handleCopyLink} variant="secondary">
-                    <LinkIcon className="mr-2 h-4 w-4" /> Copiar
-                  </Button>
-                </div>
-              ) : (
-                <p>Salve o item de portfólio primeiro para gerar um link de compartilhamento.</p>
-              )}
-            </DialogContent>
-          </Dialog>
-
-          {publicShareLink && (
-            <Button onClick={handleCopyLink} variant="outline">
-              <LinkIcon className="mr-2 h-4 w-4" /> Copiar Link
+          {publicShareLink && ( // Only show share button if a link exists
+            <Button onClick={handleCopyLink} variant="outline" className="bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700">
+              <Share2 className="mr-2 h-4 w-4" /> Compartilhar Link
             </Button>
           )}
 
