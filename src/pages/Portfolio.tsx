@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Share2, Link as LinkIcon, UserPlus, Image as ImageIcon, XCircle, Users, Trash2, Pencil } from "lucide-react";
+import { Share2, Link as LinkIcon, UserPlus, Image as ImageIcon, XCircle, Users, Trash2, Pencil, MessageSquareText } from "lucide-react"; // Adicionado MessageSquareText
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from 'uuid';
@@ -19,7 +19,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"; // Adicionado DialogFooter
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { sanitizeFileName } from "@/utils/file"; // Importar a função de sanitização
 
 interface Client {
@@ -178,7 +178,7 @@ const Portfolio = () => {
       setPublicShareLink(generatedLink);
       toast.success("Item de portfólio salvo com sucesso!");
 
-      // Reset form
+      // Reset form fields for a new entry
       setPortfolioTitle("");
       setPortfolioDescription("");
       setSelectedClient(undefined);
@@ -198,6 +198,16 @@ const Portfolio = () => {
       toast.success("Link copiado para a área de transferência!");
     } else {
       toast.error("Nenhum link para copiar. Salve o item de portfólio primeiro.");
+    }
+  };
+
+  const handleShareOnWhatsApp = () => {
+    if (publicShareLink && portfolioTitle) {
+      const message = `Confira meu novo serviço realizado: ${portfolioTitle} - ${publicShareLink}`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+      toast.success("Abrindo WhatsApp para compartilhar!");
+    } else {
+      toast.error("Nenhum link ou título de portfólio disponível para compartilhar. Salve o item primeiro.");
     }
   };
 
@@ -329,10 +339,15 @@ const Portfolio = () => {
       <div className="container mx-auto max-w-4xl">
         {/* Top Buttons */}
         <div className="flex flex-col sm:flex-row sm:justify-end space-y-2 sm:space-y-0 sm:space-x-2 mb-8">
-          {publicShareLink && ( // Only show share button if a link exists
-            <Button onClick={handleCopyLink} variant="outline" className="bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700">
-              <Share2 className="mr-2 h-4 w-4" /> Compartilhar Link
-            </Button>
+          {publicShareLink && ( // Only show share buttons if a link exists
+            <>
+              <Button onClick={handleCopyLink} variant="outline" className="bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700">
+                <LinkIcon className="mr-2 h-4 w-4" /> Copiar Link
+              </Button>
+              <Button onClick={handleShareOnWhatsApp} variant="outline" className="bg-green-500 text-white hover:bg-green-600">
+                <MessageSquareText className="mr-2 h-4 w-4" /> Compartilhar no WhatsApp
+              </Button>
+            </>
           )}
 
           <Button variant="outline" onClick={openAddClientDialog}>
