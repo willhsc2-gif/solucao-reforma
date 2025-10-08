@@ -18,7 +18,7 @@ const Home = () => {
       <div className="absolute inset-0 bg-black opacity-50"></div>
 
       {/* Conteúdo da página com animação de fade-in */}
-      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4 animate-fade-in">
+      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 animate-fade-in">
         {/* Botão de Configurações no canto superior direito */}
         <div className="absolute top-4 right-4">
           <Tooltip>
