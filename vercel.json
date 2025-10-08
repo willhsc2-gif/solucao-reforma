@@ -10,7 +10,7 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "routes": [
-    // Regra específica para o index.html para garantir no-cache e Content-Type correto
+    // 1. Explicitamente servir index.html com no-cache
     {
       "src": "/index.html",
       "headers": {
@@ -19,24 +19,25 @@
       },
       "dest": "/index.html"
     },
-    // Regras para assets gerados pelo Vite (JS, CSS com hashes)
+    // 2. Servir bundles JS gerados pelo Vite com tipo MIME correto e cache imutável
     {
-      "src": "/assets/(.*\\.js)",
+      "src": "/assets/index-([a-zA-Z0-9]+)\\.js",
       "headers": {
         "Content-Type": "application/javascript",
         "Cache-Control": "public, max-age=31536000, immutable"
       },
-      "dest": "/assets/$1"
+      "dest": "/assets/index-$1.js"
     },
+    // 3. Servir bundles CSS gerados pelo Vite com tipo MIME correto e cache imutável
     {
-      "src": "/assets/(.*\\.css)",
+      "src": "/assets/index-([a-zA-Z0-9]+)\\.css",
       "headers": {
         "Content-Type": "text/css",
         "Cache-Control": "public, max-age=31536000, immutable"
       },
-      "dest": "/assets/$1"
+      "dest": "/assets/index-$1.css"
     },
-    // Regra genérica para outros assets na pasta /assets (imagens, fontes, etc.)
+    // 4. Servir outros assets na pasta /assets (imagens, fontes, etc.) com cache imutável
     {
       "src": "/assets/(.*)",
       "headers": {
@@ -44,7 +45,7 @@
       },
       "dest": "/assets/$1"
     },
-    // Regra para ícones PNG com cache revalidável
+    // 5. Servir ícones PNG com cache revalidável
     {
       "src": "/icons/(.*\\.png)",
       "headers": {
@@ -53,7 +54,7 @@
       },
       "dest": "/icons/$1"
     },
-    // Regra para favicon.png
+    // 6. Servir favicon.png com cache revalidável
     {
       "src": "/favicon.png",
       "headers": {
@@ -62,7 +63,7 @@
       },
       "dest": "/favicon.png"
     },
-    // Regra para manifest.json, sempre revalidar
+    // 7. Servir manifest.json com no-cache
     {
       "src": "/manifest.json",
       "headers": {
@@ -71,7 +72,7 @@
       },
       "dest": "/manifest.json"
     },
-    // Regra para service-worker.js, sempre revalidar
+    // 8. Servir service-worker.js com no-cache
     {
       "src": "/service-worker.js",
       "headers": {
@@ -80,7 +81,7 @@
       },
       "dest": "/service-worker.js"
     },
-    // Outros arquivos estáticos na raiz
+    // 9. Servir outros arquivos estáticos na raiz
     {
       "src": "/robots.txt",
       "dest": "/robots.txt"
@@ -89,7 +90,7 @@
       "src": "/favicon.ico",
       "dest": "/favicon.ico"
     },
-    // Fallback para todas as outras rotas para index.html (roteamento SPA)
+    // 10. Fallback SPA: todas as outras requisições vão para index.html
     {
       "src": "/(.*)",
       "dest": "/index.html"
