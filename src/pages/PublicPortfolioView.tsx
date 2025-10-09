@@ -12,7 +12,7 @@ interface PortfolioItem {
   title: string;
   description: string;
   client_reference_contact?: string;
-  clients?: { name: string } | null; // Corrigido: clients agora é um objeto único ou null
+  clients?: { name: string }; // Nested client data
 }
 
 interface PortfolioImage {
@@ -63,12 +63,7 @@ const PublicPortfolioView = () => {
         setLoading(false);
         return;
       }
-      // Mapear os dados para garantir a tipagem correta de 'clients'
-      const typedItemData: PortfolioItem = {
-        ...itemData,
-        clients: itemData.clients ? (itemData.clients as { name: string }) : null, // Corrigido: cast para objeto único ou null
-      };
-      setPortfolioItem(typedItemData);
+      setPortfolioItem(itemData);
 
       // Fetch images for the portfolio item
       const { data: imageData, error: imageError } = await supabase
@@ -138,7 +133,7 @@ const PublicPortfolioView = () => {
             <p className="text-md font-semibold text-gray-800 dark:text-gray-200">
               Contato de Referência: {portfolioItem.client_reference_contact}
             </p>
-            {portfolioItem.clients?.name && ( // Corrigido: Acessa diretamente a propriedade 'name'
+            {portfolioItem.clients?.name && (
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 (Cliente: {portfolioItem.clients.name})
               </p>
