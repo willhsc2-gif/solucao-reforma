@@ -78,7 +78,7 @@ const Settings = () => {
   const uploadFile = async (file: File, bucket: string, path: string) => {
     const { data, error } = await supabase.storage.from(bucket).upload(path, file, {
       cacheControl: "3600",
-      upsert: true, // Upsert to overwrite if file with same path exists
+      overwrite: true, // Alterado de 'upsert: true' para 'overwrite: true'
     });
     if (error) {
       throw error;

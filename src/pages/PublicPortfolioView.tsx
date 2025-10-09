@@ -12,7 +12,7 @@ interface PortfolioItem {
   title: string;
   description: string;
   client_reference_contact?: string;
-  clients?: { name: string }[] | null; // Corrigido: clients agora é um array ou null
+  clients?: { name: string } | null; // Corrigido: clients agora é um objeto único ou null
 }
 
 interface PortfolioImage {
@@ -66,7 +66,7 @@ const PublicPortfolioView = () => {
       // Mapear os dados para garantir a tipagem correta de 'clients'
       const typedItemData: PortfolioItem = {
         ...itemData,
-        clients: itemData.clients ? (itemData.clients as { name: string }[]) : null, // Corrigido: cast para array ou null
+        clients: itemData.clients ? (itemData.clients as { name: string }) : null, // Corrigido: cast para objeto único ou null
       };
       setPortfolioItem(typedItemData);
 
@@ -138,9 +138,9 @@ const PublicPortfolioView = () => {
             <p className="text-md font-semibold text-gray-800 dark:text-gray-200">
               Contato de Referência: {portfolioItem.client_reference_contact}
             </p>
-            {portfolioItem.clients?.[0]?.name && ( // Acessa o primeiro elemento do array
+            {portfolioItem.clients?.name && ( // Corrigido: Acessa diretamente a propriedade 'name'
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                (Cliente: {portfolioItem.clients[0].name})
+                (Cliente: {portfolioItem.clients.name})
               </p>
             )}
           </div>

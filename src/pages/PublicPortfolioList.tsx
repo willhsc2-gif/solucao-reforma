@@ -12,7 +12,7 @@ interface PortfolioItem {
   description: string;
   public_share_id: string;
   client_id?: string | null; // Permitir que client_id seja null
-  clients?: { name: string }[] | null; // Corrigido: clients agora é um array ou null
+  clients?: { name: string } | null; // Corrigido: clients agora é um objeto único ou null
   portfolio_images: { image_url: string }[];
 }
 
@@ -50,7 +50,7 @@ const PublicPortfolioList = () => {
       // Mapear os dados para garantir a tipagem correta de 'clients'
       const typedData: PortfolioItem[] = data.map(item => ({
         ...item,
-        clients: item.clients as { name: string }[] | null, // Corrigido: cast para array ou null
+        clients: item.clients ? (item.clients as { name: string }) : null, // Corrigido: cast para objeto único ou null
         portfolio_images: item.portfolio_images as { image_url: string }[],
       }));
       setPortfolioItems(typedData);
@@ -125,9 +125,9 @@ const PublicPortfolioList = () => {
                   )}
                 </div>
                 <CardTitle className="mt-4">{item.title}</CardTitle>
-                {item.clients?.[0]?.name && ( // Acessa o primeiro elemento do array
+                {item.clients?.name && ( // Corrigido: Acessa diretamente a propriedade 'name'
                   <CardDescription className="text-sm text-gray-600 dark:text-gray-400">
-                    Cliente: {item.clients[0].name}
+                    Cliente: {item.clients.name}
                   </CardDescription>
                 )}
               </CardHeader>
