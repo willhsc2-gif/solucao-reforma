@@ -16,9 +16,10 @@ const useSpeechToText = (): SpeechRecognitionHook => {
   const [transcript, setTranscript] = useState('');
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
+  // Corrigido: Converte explicitamente para booleano
   const browserSupportsSpeechRecognition =
     typeof window !== 'undefined' &&
-    (window.SpeechRecognition || window.webkitSpeechRecognition);
+    !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 
   const clearTranscript = useCallback(() => {
     setTranscript('');

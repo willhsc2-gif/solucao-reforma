@@ -22,9 +22,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Trash2, CheckCircle, Clock, Eye, Share2, FileText } from "lucide-react";
+import { Trash2, CheckCircle, Clock, Eye, Share2 } from "lucide-react";
 import { format } from "date-fns";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"; // Dialog is still used for client management, but not for PDF viewing here.
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface Budget {
   id: string;
@@ -40,12 +40,10 @@ interface Budget {
   value_without_material?: number;
   validity_days?: number;
   payment_method?: string;
-  pdf_url?: string;
+  pdf_url?: string; // Apenas o PDF principal
   logo_url?: string;
   status: "Pendente" | "Finalizado";
   created_at: string;
-  material_budget_pdf_url?: string;
-  material_budget_pdf_name?: string;
 }
 
 const BudgetList = () => {
@@ -80,16 +78,39 @@ const BudgetList = () => {
 
   const handleDeleteBudget = async (id: string) => {
     setLoading(true);
-    const { error } = await supabase.from("budgets").delete().eq("id", id);
+    try {
+      // Fetch PDF URL to delete from storage
+      const { data: budgetData, error: fetchBudgetError } = await supabase
+        .from("budgets")
+        .select("pdf_url")
+        .eq("id", id)
+        .single();
 
-    if (error) {
-      console.error("Erro ao excluir orçamento:", error);
-      toast.error("Erro ao excluir orçamento: " + error.message);
-    } else {
+      if (fetchBudgetError) {
+        console.warn("Could not fetch PDF URL for deletion from storage:", fetchBudgetError.message);
+      } else if (budgetData?.pdf_url) {
+        const filePath = budgetData.pdf_url.split('budget_pdfs/')[1];
+        if (filePath) {
+          const { error: deleteStorageError } = await supabase.storage.from("budget_pdfs").remove([filePath]);
+          if (deleteStorageError) {
+            console.warn("Could not delete PDF from storage:", deleteStorageError.message);
+          }
+        }
+      }
+
+      const { error } = await supabase.from("budgets").delete().eq("id", id);
+
+      if (error) {
+        throw error;
+      }
       toast.success("Orçamento excluído com sucesso!");
       fetchBudgets();
+    } catch (err: any) {
+      console.error("Erro ao excluir orçamento:", err);
+      toast.error("Erro ao excluir orçamento: " + err.message);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleUpdateBudgetStatus = async (id: string, newStatus: "Pendente" | "Finalizado") => {
@@ -186,7 +207,7 @@ const BudgetList = () => {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex flex-wrap justify-end gap-2"> {/* Use flex-wrap and gap for responsiveness */}
+                      <div className="flex flex-wrap justify-end gap-2">
                         {budget.pdf_url && (
                           <>
                             <a href={budget.pdf_url} target="_blank" rel="noopener noreferrer" title="Visualizar PDF do Orçamento">
@@ -198,13 +219,6 @@ const BudgetList = () => {
                               <Share2 className="h-4 w-4" />
                             </Button>
                           </>
-                        )}
-                        {budget.material_budget_pdf_url && (
-                          <a href={budget.material_budget_pdf_url} target="_blank" rel="noopener noreferrer" title="Visualizar PDF de Materiais">
-                            <Button variant="outline" size="sm">
-                              <FileText className="h-4 w-4" />
-                            </Button>
-                          </a>
                         )}
                         <Button
                           variant="outline"

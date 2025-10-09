@@ -11,8 +11,8 @@ interface PortfolioItem {
   title: string;
   description: string;
   public_share_id: string;
-  client_id?: string;
-  clients?: { name: string };
+  client_id?: string | null; // Permitir que client_id seja null
+  clients?: { name: string } | null; // Corrigido: clients agora é um objeto único ou null
   portfolio_images: { image_url: string }[];
 }
 
@@ -47,7 +47,13 @@ const PublicPortfolioList = () => {
       if (error) {
         throw error;
       }
-      setPortfolioItems(data || []);
+      // Mapear os dados para garantir a tipagem correta de 'clients'
+      const typedData: PortfolioItem[] = data.map(item => ({
+        ...item,
+        clients: item.clients ? (item.clients as { name: string }) : null, // Corrigido: cast para objeto único ou null
+        portfolio_images: item.portfolio_images as { image_url: string }[],
+      }));
+      setPortfolioItems(typedData);
     } catch (err: any) {
       console.error("Erro ao carregar portfólios públicos:", err);
       setError("Erro ao carregar os portfólios. Por favor, tente novamente mais tarde.");
@@ -119,7 +125,7 @@ const PublicPortfolioList = () => {
                   )}
                 </div>
                 <CardTitle className="mt-4">{item.title}</CardTitle>
-                {item.clients?.name && (
+                {item.clients?.name && ( // Corrigido: Acessa diretamente a propriedade 'name'
                   <CardDescription className="text-sm text-gray-600 dark:text-gray-400">
                     Cliente: {item.clients.name}
                   </CardDescription>

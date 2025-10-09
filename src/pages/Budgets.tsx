@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,31 +10,25 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { v4 as uuidv4 } from 'uuid';
+import { sanitizeFileName } from "@/utils/file";
 
 // Import the new modular components and hooks
 import { useBudgetForm } from "@/hooks/useBudgetForm";
 import { useCompanySettings } from "@/hooks/useCompanySettings";
-import { usePdfGeneration } from "@/hooks/usePdfGeneration";
-import BudgetPdfContent from "@/components/BudgetPdfContent";
-import PdfViewerDialog from "@/components/PdfViewerDialog";
-
-// Import the worker for pdfjs-dist
-import * as pdfjs from 'pdfjs-dist';
-// Configura o worker do pdf.js para carregar o script localmente
-// Usar new URL() para garantir que o Vite trate o worker como um asset e forneça o caminho correto.
-pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.js', import.meta.url).toString();
 
 const Budgets = () => {
   const {
     formData,
     date,
     setDate,
-    materialBudgetPdfFile,
-    materialBudgetPdfFileName,
-    materialBudgetPdfDisplayUrl,
+    budgetPdfFile,
+    budgetPdfFileName,
+    budgetPdfDisplayUrl,
     handleInputChange,
-    handleMaterialBudgetPdfChange,
-    handleRemoveMaterialBudgetPdf,
+    handleBudgetPdfChange,
+    handleRemoveBudgetPdf,
     isDescriptionListening,
     toggleDescriptionListening,
     isNotesListening,
@@ -44,9 +38,7 @@ const Budgets = () => {
   } = useBudgetForm();
 
   const { companySettings, loadingCompanySettings, errorCompanySettings } = useCompanySettings();
-
-  const pdfContentRef = React.useRef<HTMLDivElement>(null);
-  const [showPdfViewer, setShowPdfViewer] = React.useState(false);
+  const [loadingSave, setLoadingSave] = useState(false);
 
   const formatCurrency = (value: string | number) => {
     const num = parseFloat(String(value));
@@ -59,20 +51,58 @@ const Budgets = () => {
     }).format(num);
   };
 
-  const { loadingPdf, currentPdfUrl, handleSaveAndGeneratePdf } = usePdfGeneration(
-    formData,
-    date,
-    companySettings,
-    materialBudgetPdfFile,
-    materialBudgetPdfFileName,
-    pdfContentRef,
-    formatCurrency,
-    resetForm
-  );
+  const uploadFile = useCallback(async (file: File, bucket: string, path: string) => {
+    const { data, error } = await supabase.storage.from(bucket).upload(path, file, {
+      cacheControl: "3600",
+      upsert: false,
+    });
+    if (error) {
+      throw error;
+    }
+    const { data: publicUrlData } = supabase.storage.from(bucket).getPublicUrl(data.path);
+    return publicUrlData.publicUrl;
+  }, []);
 
-  const handleGeneratePdfClick = async () => {
-    setShowPdfViewer(true); // Open the dialog immediately
-    await handleSaveAndGeneratePdf(); // Start PDF generation and saving
+  const handleSaveBudget = async () => {
+    setLoadingSave(true);
+    try {
+      let uploadedPdfUrl: string | null = null;
+      if (budgetPdfFile && budgetPdfFileName) {
+        const pdfPath = `budgets/${formData.budgetNumber}-${Date.now()}-${budgetPdfFileName}`;
+        uploadedPdfUrl = await uploadFile(budgetPdfFile, "budget_pdfs", pdfPath);
+      }
+
+      const { error } = await supabase.from("budgets").insert([
+        {
+          client_id: null,
+          client_name_text: formData.clientName,
+          budget_number: formData.budgetNumber,
+          description: formData.description,
+          additional_notes: formData.additionalNotes,
+          duration: formData.duration,
+          budget_date: date ? format(date, "yyyy-MM-dd") : null,
+          value_with_material: parseFloat(formData.valueWithMaterial) || 0,
+          value_without_material: parseFloat(formData.valueWithoutMaterial) || 0,
+          validity_days: parseInt(formData.validityDays) || 0,
+          payment_method: formData.paymentMethod,
+          pdf_url: uploadedPdfUrl,
+          logo_url: companySettings.logo_url,
+        },
+      ]);
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success("Orçamento salvo e PDF enviado com sucesso!");
+      resetForm(); // Reset the form after successful save
+
+    } catch (error: any) {
+      toast.error("Erro ao salvar orçamento: " + error.message);
+      console.error("Erro ao salvar orçamento:", error);
+    } finally {
+      setLoadingSave(false);
+    }
   };
 
   return (
@@ -197,19 +227,19 @@ const Budgets = () => {
               <Input id="paymentMethod" placeholder="Ex: 50% no início, 50% na entrega" value={formData.paymentMethod} onChange={handleInputChange} />
             </div>
             <div>
-              <Label htmlFor="material-budget-pdf-upload">Orçamento de Materiais (PDF da Loja)</Label>
+              <Label htmlFor="budget-pdf-upload">Anexar Orçamento (PDF)</Label>
               <div className="flex items-center space-x-2 mt-2">
-                {materialBudgetPdfDisplayUrl ? (
+                {budgetPdfDisplayUrl ? (
                   <>
-                    <a href={materialBudgetPdfDisplayUrl} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-2 text-blue-600 hover:underline">
+                    <a href={budgetPdfDisplayUrl} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-2 text-blue-600 hover:underline">
                       <FileText className="h-5 w-5" />
-                      <span className="text-sm truncate max-w-[150px]">{materialBudgetPdfFileName}</span>
+                      <span className="text-sm truncate max-w-[150px]">{budgetPdfFileName}</span>
                     </a>
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      onClick={handleRemoveMaterialBudgetPdf}
+                      onClick={handleRemoveBudgetPdf}
                       title="Remover PDF"
                     >
                       <XCircle className="h-4 w-4 text-red-500" />
@@ -217,17 +247,17 @@ const Budgets = () => {
                   </>
                 ) : (
                   <Input
-                    id="material-budget-pdf-upload"
+                    id="budget-pdf-upload"
                     type="file"
                     accept="application/pdf"
-                    onChange={handleMaterialBudgetPdfChange}
+                    onChange={handleBudgetPdfChange}
                     className="flex-grow"
                   />
                 )}
               </div>
-              {!materialBudgetPdfDisplayUrl && (
+              {!budgetPdfDisplayUrl && (
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Opcional: Anexe um PDF de orçamento de materiais da loja.
+                  Opcional: Anexe o PDF do orçamento.
                 </p>
               )}
             </div>
@@ -235,32 +265,11 @@ const Budgets = () => {
         </form>
 
         <div className="mt-8 text-center">
-          <Button onClick={handleGeneratePdfClick} className="px-8 py-4 text-lg bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700 rounded-lg shadow-lg transition-all duration-300" disabled={loadingPdf}>
-            {loadingPdf ? "Salvando..." : <><Save className="mr-2 h-5 w-5" /> Salvar e Gerar PDF</>}
+          <Button onClick={handleSaveBudget} className="px-8 py-4 text-lg bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700 rounded-lg shadow-lg transition-all duration-300" disabled={loadingSave}>
+            {loadingSave ? "Salvando..." : <><Save className="mr-2 h-5 w-5" /> Salvar Orçamento</>}
           </Button>
         </div>
       </main>
-
-      {/* Hidden content for PDF generation */}
-      <BudgetPdfContent
-        formData={formData}
-        date={date}
-        companySettings={companySettings}
-        materialBudgetPdfFile={materialBudgetPdfFile}
-        materialBudgetPdfFileName={materialBudgetPdfFileName}
-        formatCurrency={formatCurrency}
-        pdfContentRef={pdfContentRef}
-      />
-
-      {/* PDF Viewer Dialog */}
-      <PdfViewerDialog
-        showPdfViewer={showPdfViewer}
-        setShowPdfViewer={setShowPdfViewer}
-        currentPdfUrl={currentPdfUrl}
-        budgetNumber={formData.budgetNumber}
-        clientName={formData.clientName}
-        date={date}
-      />
     </div>
   );
 };

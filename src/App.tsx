@@ -7,7 +7,7 @@ import Home from "./pages/Home";
 import Budgets from "./pages/Budgets";
 import Portfolio from "./pages/Portfolio";
 import PublicPortfolioView from "./pages/PublicPortfolioView";
-import PublicPortfolioList from "./pages/PublicPortfolioList"; // Importar a nova página de lista de portfólios públicos
+import PublicPortfolioList from "./pages/PublicPortfolioList";
 import BudgetList from "./pages/BudgetList";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -26,8 +26,9 @@ const App = () => (
           <Route path="/budget-list" element={<BudgetList />} />
           <Route path="/portfolio" element={<Portfolio />} />
           <Route path="/portfolio-view/:publicShareId" element={<PublicPortfolioView />} />
-          <Route path="/public-portfolio" element={<PublicPortfolioList />} /> {/* Nova rota para a lista pública de portfólios */}
+          <Route path="/public-portfolio" element={<PublicPortfolioList />} />
           <Route path="/settings" element={<Settings />} />
+
           {/* ADICIONE TODAS AS ROTAS PERSONALIZADAS ACIMA DA ROTA CORINGA "*" */}
           <Route path="*" element={<NotFound />} />
         </Routes>
